@@ -11,22 +11,22 @@ interface NoInsightStateProps {
 
 export function NoInsightState({ reason, onGenerate }: NoInsightStateProps) {
   return (
-    <Card className="p-12 bg-slate-50 border-dashed border-2 border-slate-200">
+    <Card className="border-2 border-dashed border-border/70 bg-card p-12 shadow-sm">
       <div className="flex flex-col items-center text-center">
-        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-          <FileQuestion className="w-8 h-8 text-slate-400" />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <FileQuestion className="h-8 w-8 text-muted-foreground" />
         </div>
 
-        <h3 className="text-lg font-medium text-slate-800 mb-2">
+        <h3 className="mb-2 text-lg font-medium text-foreground">
           No Insight Available
         </h3>
 
-        <p className="text-sm text-slate-500 max-w-md mb-6">
+        <p className="mb-6 max-w-md text-sm text-muted-foreground">
           {reason}
         </p>
 
         <Button
-          className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
           onClick={onGenerate}
         >
           <Sparkles className="w-4 h-4" />

@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Pagination } from "@/components/shared/pagination"
 import { Loader2, Search } from "lucide-react"
 import { waterfallRecommendationSettingsApi } from "@/lib/api/services"
 import type { App } from "@/types/api"
@@ -109,7 +110,7 @@ function getAssignmentDisplay(params: {
     return {
       label: "Unassigned",
       detail: null,
-      badgeClassName: "border border-emerald-200 bg-emerald-50 text-emerald-700",
+      badgeClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     }
   }
 
@@ -117,7 +118,7 @@ function getAssignmentDisplay(params: {
     return {
       label: "Assigned here",
       detail: null,
-      badgeClassName: "border border-blue-200 bg-blue-50 text-blue-700",
+      badgeClassName: "border-primary/20 bg-primary/10 text-primary",
     }
   }
 
@@ -125,14 +126,14 @@ function getAssignmentDisplay(params: {
     return {
       label: "Will reassign",
       detail: `From ${params.assignment.configName}`,
-      badgeClassName: "border border-amber-200 bg-amber-50 text-amber-800",
+      badgeClassName: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
     }
   }
 
   return {
     label: "Assigned",
     detail: params.assignment.configName,
-    badgeClassName: "border border-amber-200 bg-amber-50 text-amber-800",
+    badgeClassName: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
   }
 }
 
@@ -202,6 +203,8 @@ export function CreateEditConfigDialog({
   const [ruleGroupId, setRuleGroupId] = useState("none")
   const [notes, setNotes] = useState("")
   const [appSearch, setAppSearch] = useState("")
+  const [appAssignmentsPage, setAppAssignmentsPage] = useState(1)
+  const [appAssignmentsPageSize, setAppAssignmentsPageSize] = useState(10)
   const [applyMode, setApplyMode] = useState<ConfigApplyMode>("keep_current")
   const [intervalDays, setIntervalDays] = useState(String(DEFAULT_INTERVAL_DAYS))
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -283,6 +286,20 @@ export function CreateEditConfigDialog({
       return getAppDisplayName(left).localeCompare(getAppDisplayName(right))
     })
   }, [appSearch, apps])
+
+  const appAssignmentsTotalPages = Math.max(1, Math.ceil(sortedApps.length / appAssignmentsPageSize))
+  const paginatedApps = useMemo(() => {
+    const startIndex = (appAssignmentsPage - 1) * appAssignmentsPageSize
+    return sortedApps.slice(startIndex, startIndex + appAssignmentsPageSize)
+  }, [appAssignmentsPage, appAssignmentsPageSize, sortedApps])
+
+  useEffect(() => {
+    setAppAssignmentsPage((page) => Math.min(page, appAssignmentsTotalPages))
+  }, [appAssignmentsTotalPages])
+
+  useEffect(() => {
+    setAppAssignmentsPage(1)
+  }, [appSearch])
 
   const selectedApps = useMemo(() => {
     return apps.filter((app) => selectedAppIds.includes(app.appId))
@@ -420,33 +437,33 @@ export function CreateEditConfigDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[94vh] w-[70vw] max-h-[94vh] max-w-[70vw] flex-col gap-2 overflow-hidden p-3 sm:max-w-[70vw] sm:p-4">
-          <DialogHeader className="shrink-0 gap-0.5 pr-8">
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col gap-3 overflow-hidden p-0 sm:max-h-[calc(100dvh-2rem)] sm:w-[min(96vw,72rem)] sm:max-w-[72rem]">
+          <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-12 text-left sm:px-6">
             <DialogTitle>{config ? "Edit Rule Config" : "Create Rule Config"}</DialogTitle>
             <DialogDescription className="text-xs leading-5">
               Create a reusable rule config, optionally assign apps, and keep one config as the global default fallback.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <div className="grid h-full gap-3 lg:grid-cols-10">
-              <div className="min-h-0 space-y-2 overflow-y-auto pb-6 pr-2 lg:col-span-4">
-                <div className="space-y-2 rounded-xl border-2 border-blue-200 bg-blue-50/70 p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6">
+            <div className="grid min-h-full gap-3 lg:grid-cols-10">
+              <div className="min-h-0 space-y-2 overflow-y-auto pb-2 pr-2 lg:col-span-4">
+                <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
                   <div className="space-y-1">
-                    <Label htmlFor="config-name" className="text-slate-900">Config Name</Label>
-                    <p className="text-xs text-slate-600">Choose a unique name so operators can identify this config quickly.</p>
+                    <Label htmlFor="config-name" className="text-foreground">Config Name</Label>
+                    <p className="text-xs text-muted-foreground">Choose a unique name so operators can identify this config quickly.</p>
                   </div>
                   <Input
                     id="config-name"
-                    className="border-blue-200 bg-white shadow-sm"
+                    className="border-border bg-background shadow-sm"
                     value={configName}
                     onChange={(event) => setConfigName(event.target.value)}
                     placeholder="Revenue Recovery Tier A"
                   />
-                  {errors.configName && <p className="text-sm text-red-600">{errors.configName}</p>}
+                  {errors.configName && <p className="text-sm text-destructive">{errors.configName}</p>}
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="rounded-xl border border-border bg-card p-3">
                   <div className="flex items-start gap-3">
                     <Checkbox
                       id="is-global-default"
@@ -464,7 +481,7 @@ export function CreateEditConfigDialog({
                     <div className="space-y-1">
                       <Label htmlFor="is-global-default">Use as Global Default</Label>
                       {willReplaceExistingGlobalDefault && (
-                        <p className="text-sm text-amber-700">
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
                           Saving this config will replace the current global default in the same save.
                         </p>
                       )}
@@ -482,7 +499,7 @@ export function CreateEditConfigDialog({
                       value={minRecommendations}
                       onChange={(event) => setMinRecommendations(event.target.value)}
                     />
-                    {errors.minRecommendations && <p className="text-sm text-red-600">{errors.minRecommendations}</p>}
+                    {errors.minRecommendations && <p className="text-sm text-destructive">{errors.minRecommendations}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="max-recommendations">Max Recommendations</Label>
@@ -493,7 +510,7 @@ export function CreateEditConfigDialog({
                       value={maxRecommendations}
                       onChange={(event) => setMaxRecommendations(event.target.value)}
                     />
-                    {errors.maxRecommendations && <p className="text-sm text-red-600">{errors.maxRecommendations}</p>}
+                    {errors.maxRecommendations && <p className="text-sm text-destructive">{errors.maxRecommendations}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="min-match-rate">Min Match Rate %</Label>
@@ -505,7 +522,7 @@ export function CreateEditConfigDialog({
                       value={minMatchRatePercent}
                       onChange={(event) => setMinMatchRatePercent(event.target.value)}
                     />
-                    {errors.minMatchRatePercent && <p className="text-sm text-red-600">{errors.minMatchRatePercent}</p>}
+                    {errors.minMatchRatePercent && <p className="text-sm text-destructive">{errors.minMatchRatePercent}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="min-sow">Min SoW %</Label>
@@ -517,10 +534,10 @@ export function CreateEditConfigDialog({
                       value={minSowPercent}
                       onChange={(event) => setMinSowPercent(event.target.value)}
                     />
-                    {errors.minSowPercent && <p className="text-sm text-red-600">{errors.minSowPercent}</p>}
+                    {errors.minSowPercent && <p className="text-sm text-destructive">{errors.minSowPercent}</p>}
                   </div>
                 </div>
-                {errors.thresholds && <p className="text-sm text-red-600">{errors.thresholds}</p>}
+                {errors.thresholds && <p className="text-sm text-destructive">{errors.thresholds}</p>}
 
                 <div className="grid gap-2.5 sm:grid-cols-2">
                   <div className="space-y-1.5">
@@ -530,7 +547,7 @@ export function CreateEditConfigDialog({
                         {selectedRuleGroup ? (
                           <div className="flex items-center gap-2">
                             <span
-                              className="inline-block h-2.5 w-2.5 rounded-full border border-slate-300"
+                              className="inline-block h-2.5 w-2.5 rounded-full border border-border"
                               style={{ backgroundColor: selectedRuleGroup.color || "#94a3b8" }}
                             />
                             <span>{selectedRuleGroup.name}</span>
@@ -563,9 +580,9 @@ export function CreateEditConfigDialog({
                       value={intervalDays}
                       onChange={(event) => setIntervalDays(event.target.value)}
                       disabled={!shouldShowApplyMode || applyMode === "keep_current"}
-                      className="bg-white disabled:bg-slate-50"
+                      className="bg-background disabled:bg-muted"
                     />
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {!canManageApplyPolicies
                         ? "You do not have permission to bulk update apply mode policies."
                         : isGlobalDefault
@@ -576,12 +593,12 @@ export function CreateEditConfigDialog({
                               ? "Choose Semi-auto or Auto to edit the interval."
                               : `Valid range: ${MIN_INTERVAL_DAYS}-${MAX_INTERVAL_DAYS} days. Current selection: ${parsedIntervalDays != null ? formatIntervalLabel(parsedIntervalDays) : "Invalid interval"}`}
                     </p>
-                    {errors.intervalDays && <p className="text-sm text-red-600">{errors.intervalDays}</p>}
+                    {errors.intervalDays && <p className="text-sm text-destructive">{errors.intervalDays}</p>}
                   </div>
                 </div>
-                
-                <div className="rounded-xl border border-slate-200 p-2.5">
-                  <h3 className="font-medium text-slate-900">Apply Mode Sync</h3>
+
+                <div className="rounded-xl border border-border bg-card p-2.5">
+                  <h3 className="font-medium text-foreground">Apply Mode Sync</h3>
                   {shouldShowApplyMode ? (
                     <div className="mt-1.5 space-y-2">
                       {APPLY_MODE_OPTIONS.map((option) => (
@@ -591,18 +608,18 @@ export function CreateEditConfigDialog({
                           onClick={() => setApplyMode(option.value)}
                           className={`w-full rounded-lg border px-3 py-1.5 text-left transition ${
                             applyMode === option.value
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-slate-200 bg-white hover:border-slate-300"
+                              ? "border-primary/30 bg-primary/10"
+                              : "border-border bg-background hover:border-primary/20"
                           }`}
                         >
-                          <div className="font-medium text-slate-900">{option.label}</div>
-                          <div className="mt-0.5 text-xs leading-5 text-slate-500">{option.description}</div>
+                          <div className="font-medium text-foreground">{option.label}</div>
+                          <div className="mt-0.5 text-xs leading-5 text-muted-foreground">{option.description}</div>
                         </button>
                       ))}
 
                     </div>
                   ) : (
-                    <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                    <div className="mt-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                       {!canManageApplyPolicies
                         ? "You do not have permission to bulk update apply mode policies from this screen."
                         : isGlobalDefault
@@ -623,32 +640,32 @@ export function CreateEditConfigDialog({
                 </div>
               </div>
 
-              <div className="min-h-0 space-y-2.5 overflow-hidden lg:col-span-6">
-                <div className="flex h-full min-h-0 flex-col rounded-xl border border-slate-200 p-2.5">
+              <div className="min-h-0 space-y-2.5 overflow-y-auto lg:col-span-6">
+                <div className="flex h-full min-h-0 flex-col rounded-xl border border-border bg-card p-2.5">
                   <div className="shrink-0 flex items-center justify-between gap-3">
                     <div>
-                      <h3 className="font-medium text-slate-900">App Assignments</h3>
-                      <p className="text-sm text-slate-500">
+                      <h3 className="font-medium text-foreground">App Assignments</h3>
+                      <p className="text-sm text-muted-foreground">
                         {isGlobalDefault
                           ? "Global default configs do not keep explicit app assignments."
                           : `Selected ${formatAppCount(selectedAppIds.length)}.`}
                       </p>
                     </div>
                     {!isGlobalDefault && selectedAppIds.length > 0 && (
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground">
                         {formatAppCount(selectedAppIds.length)}
                       </Badge>
                     )}
                   </div>
 
                   {isGlobalDefault ? (
-                    <div className="mt-3 shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    <div className="mt-3 shrink-0 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
                       This config will be used only as fallback. Save it without app assignments.
                     </div>
                   ) : (
                     <div className="mt-2.5 flex min-h-0 flex-1 flex-col space-y-2.5">
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           value={appSearch}
                           onChange={(event) => setAppSearch(event.target.value)}
@@ -656,21 +673,21 @@ export function CreateEditConfigDialog({
                           className="pl-9"
                         />
                       </div>
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                         Selecting an app already assigned to another config will move that app to this config when you save.
                       </div>
                       {selectedAppsAssignedElsewhere.length > 0 && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-700 dark:text-amber-300">
                           <div className="font-medium">
                             {formatAppCount(selectedAppsAssignedElsewhere.length)} will be reassigned from another config on save.
                           </div>
-                          <div className="mt-1 text-xs text-amber-800">
+                          <div className="mt-1 text-xs text-amber-700/90 dark:text-amber-200">
                             You will need to confirm the reassignment before saving.
                           </div>
                         </div>
                       )}
                       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                        {sortedApps.map((app) => {
+                        {paginatedApps.map((app) => {
                           const assignment = appAssignmentMap[app.appId]
                           const appName = getAppDisplayName(app)
                           const isChecked = selectedAppIds.includes(app.appId)
@@ -685,8 +702,8 @@ export function CreateEditConfigDialog({
                               key={app.appId}
                               className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2 transition ${
                                 isChecked
-                                  ? "border-blue-200 bg-blue-50/40 hover:border-blue-300"
-                                  : "border-slate-200 bg-white hover:border-slate-300"
+                                  ? "border-primary/20 bg-primary/10 hover:border-primary/30"
+                                  : "border-border bg-background hover:border-primary/20"
                               }`}
                             >
                               <Checkbox
@@ -696,7 +713,7 @@ export function CreateEditConfigDialog({
                               />
                               <Avatar className="h-9 w-9 shrink-0 rounded-lg">
                                 <AvatarImage src={app.iconUri || "/placeholder.svg"} alt={appName} className="rounded-lg object-cover" />
-                                <AvatarFallback className="rounded-lg bg-slate-100 text-xs font-medium text-slate-600">
+                                <AvatarFallback className="rounded-lg bg-muted text-xs font-medium text-muted-foreground">
                                   {appName.slice(0, 1).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -704,19 +721,19 @@ export function CreateEditConfigDialog({
                                 <div className="flex items-center gap-3">
                                   <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center gap-2">
-                                      <span className="truncate font-medium text-slate-900">{appName}</span>
+                                      <span className="truncate font-medium text-foreground">{appName}</span>
                                       {app.platform && (
-                                        <Badge variant="outline" className="text-slate-600">
+                                        <Badge variant="outline" className="text-muted-foreground">
                                           {app.platform}
                                         </Badge>
                                       )}
                                     </div>
-                                    <div className="mt-0.5 truncate text-xs text-slate-500">{app.appId}</div>
+                                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{app.appId}</div>
                                   </div>
                                   <div className="ml-auto flex shrink-0 flex-col items-end gap-1 text-right">
                                     <Badge className={assignmentDisplay.badgeClassName}>{assignmentDisplay.label}</Badge>
                                     {assignmentDisplay.detail && (
-                                      <div className="max-w-[11rem] truncate text-[11px] text-slate-500">
+                                      <div className="max-w-[11rem] truncate text-[11px] text-muted-foreground">
                                         {assignmentDisplay.detail}
                                       </div>
                                     )}
@@ -728,11 +745,25 @@ export function CreateEditConfigDialog({
                           )
                         })}
                         {sortedApps.length === 0 && (
-                          <div className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-slate-500">
+                          <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
                             No apps match this search.
                           </div>
                         )}
                       </div>
+                      {sortedApps.length > 0 && (
+                        <Pagination
+                          currentPage={appAssignmentsPage}
+                          totalPages={appAssignmentsTotalPages}
+                          totalItems={sortedApps.length}
+                          pageSize={appAssignmentsPageSize}
+                          onPageChange={setAppAssignmentsPage}
+                          onPageSizeChange={(size) => {
+                            setAppAssignmentsPageSize(size)
+                            setAppAssignmentsPage(1)
+                          }}
+                          itemName="apps"
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -741,11 +772,11 @@ export function CreateEditConfigDialog({
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 border-t bg-white/95 pt-2 backdrop-blur supports-[backdrop-filter]:bg-white/85">
-            <Button variant="outline" className="bg-transparent" onClick={() => onOpenChange(false)} disabled={saving}>
+          <DialogFooter className="shrink-0 border-t border-border bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:px-6">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleOpenConfirm} disabled={saving}>
+            <Button onClick={handleOpenConfirm} disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -762,12 +793,12 @@ export function CreateEditConfigDialog({
       </Dialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col overflow-hidden p-0 sm:max-h-[calc(100dvh-2rem)] sm:w-[min(92vw,48rem)] sm:max-w-[48rem]">
+          <AlertDialogHeader className="border-b border-border px-4 py-4 pr-12 text-left sm:px-6">
             <AlertDialogTitle>{confirmContent.title}</AlertDialogTitle>
             <AlertDialogDescription>{confirmContent.description}</AlertDialogDescription>
             {selectedAppsAssignedElsewhere.length > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-left text-sm text-amber-900">
+              <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-left text-sm text-amber-700 dark:text-amber-300">
                 <div className="font-medium">
                   The following apps are currently assigned to another config and will be moved:
                 </div>
@@ -775,18 +806,18 @@ export function CreateEditConfigDialog({
                   {selectedAppsAssignedElsewhere.map((app) => (
                     <div
                       key={app.appId}
-                      className="flex items-start gap-3 rounded-md border border-amber-200 bg-white px-3 py-2"
+                      className="flex items-start gap-3 rounded-md border border-amber-500/20 bg-background px-3 py-2"
                     >
                       <Avatar className="h-9 w-9 shrink-0 rounded-lg">
                         <AvatarImage src={apps.find((item) => item.appId === app.appId)?.iconUri || "/placeholder.svg"} alt={app.appName} className="rounded-lg object-cover" />
-                        <AvatarFallback className="rounded-lg bg-slate-100 text-xs font-medium text-slate-600">
+                        <AvatarFallback className="rounded-lg bg-muted text-xs font-medium text-muted-foreground">
                           {app.appName.slice(0, 1).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-slate-900">{app.appName}</div>
-                        <div className="mt-1 text-xs text-slate-500">{app.appId}</div>
-                        <div className="mt-1 text-xs text-amber-800">Currently assigned to {app.currentConfigName}</div>
+                        <div className="font-medium text-foreground">{app.appName}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{app.appId}</div>
+                        <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">Currently assigned to {app.currentConfigName}</div>
                       </div>
                     </div>
                   ))}
@@ -794,10 +825,9 @@ export function CreateEditConfigDialog({
               </div>
             )}
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="border-t border-border bg-background px-4 py-4 sm:px-6">
             <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-blue-600 text-white hover:bg-blue-700"
               disabled={saving || !pendingRequest}
               onClick={async () => {
                 if (!pendingRequest) return

@@ -132,6 +132,9 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
   const [appleIapDragOver, setAppleIapDragOver] = useState(false)
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const editNetwork = editAccount?.network
+  const isEditNetworkMismatch =
+    isEdit && editNetwork != null && activeTab !== editNetwork
 
   // Reset / pre-fill on open
   useEffect(() => {
@@ -481,8 +484,8 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] min-w-0 max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex h-[calc(100dvh-1rem)] min-w-0 w-[calc(100vw-1rem)] flex-col overflow-hidden p-0 sm:h-[calc(100dvh-2rem)] sm:w-[min(96vw,72rem)] sm:max-w-[72rem]">
+        <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-12 text-left sm:px-6">
           <DialogTitle>{isEdit ? "Edit Data Account" : "Add Data Account"}</DialogTitle>
           <DialogDescription>
             {isEdit
@@ -491,28 +494,34 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => {
-              if (!isEdit) {
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-6">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => {
                 setActiveTab(v as typeof activeTab)
                 setErrors({})
                 setTestState("idle")
-              }
-            }}
-          >
-            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 bg-muted ${isEdit ? "pointer-events-none opacity-70" : ""}`}>
-              <TabsTrigger value="admob">AdMob</TabsTrigger>
-              <TabsTrigger value="applovin">AppLovin</TabsTrigger>
-              <TabsTrigger value="xmp">XMP</TabsTrigger>
-              <TabsTrigger value="appsflyer">AppsFlyer</TabsTrigger>
-              <TabsTrigger value="qonversion">Qonversion</TabsTrigger>
-              <TabsTrigger value="apple">Apple</TabsTrigger>
+              }}
+              className="flex min-h-0 flex-col gap-4"
+            >
+            <TabsList className="flex h-auto min-h-11 w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+              <TabsTrigger value="admob" className="flex-none whitespace-nowrap px-4 py-2">AdMob</TabsTrigger>
+              <TabsTrigger value="applovin" className="flex-none whitespace-nowrap px-4 py-2">AppLovin</TabsTrigger>
+              <TabsTrigger value="xmp" className="flex-none whitespace-nowrap px-4 py-2">XMP</TabsTrigger>
+              <TabsTrigger value="appsflyer" className="flex-none whitespace-nowrap px-4 py-2">AppsFlyer</TabsTrigger>
+              <TabsTrigger value="qonversion" className="flex-none whitespace-nowrap px-4 py-2">Qonversion</TabsTrigger>
+              <TabsTrigger value="apple" className="flex-none whitespace-nowrap px-4 py-2">Apple</TabsTrigger>
             </TabsList>
 
+            {isEditNetworkMismatch && editNetwork ? (
+              <p className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                You are currently viewing a different network tab. Switch back to the {editNetwork} tab to update this account.
+              </p>
+            ) : null}
+
             {/* ── AdMob Tab ── */}
-            <TabsContent value="admob" className="mt-5 space-y-4">
+            <TabsContent value="admob" className="mt-5 min-w-0 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="admob-name">
                   Account Name <span className="text-destructive">*</span>
@@ -629,7 +638,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             </TabsContent>
 
             {/* ── AppLovin Tab ── */}
-            <TabsContent value="applovin" className="mt-5 space-y-4">
+            <TabsContent value="applovin" className="mt-5 min-w-0 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="al-name">
                   Account Name <span className="text-destructive">*</span>
@@ -680,7 +689,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             </TabsContent>
 
             {/* ── AppsFlyer Tab ── */}
-            <TabsContent value="appsflyer" className="mt-5 space-y-4">
+            <TabsContent value="appsflyer" className="mt-5 min-w-0 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="af-name">
                   Account Name <span className="text-destructive">*</span>
@@ -757,7 +766,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             </TabsContent>
 
             {/* ── XMP / Mintegral Tab ── */}
-            <TabsContent value="xmp" className="mt-5 space-y-4">
+            <TabsContent value="xmp" className="mt-5 min-w-0 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="xmp-name">
                   Account Name <span className="text-destructive">*</span>
@@ -835,11 +844,13 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                 {errors.qonName && <p className="text-xs text-destructive">{errors.qonName}</p>}
               </div>
 
-              <div className="min-w-0 max-w-full space-y-3 rounded-lg border border-sky-100 bg-sky-50/50 p-4">
-                <h4 className="text-sm font-semibold text-foreground">Dashboard (web crawler)</h4>
+              <div className="min-w-0 max-w-full space-y-3 rounded-xl border border-border/70 bg-gradient-to-b from-background/80 to-muted/20 p-4 shadow-sm">
+                <h4 className="text-sm font-semibold tracking-tight text-foreground">Dashboard (web crawler)</h4>
                 <div className="min-w-0 space-y-2">
-                  <Label htmlFor="qon-dcookie">Cookie header</Label>
-                  <div className="min-w-0 w-full max-w-full overflow-hidden rounded-md border border-input bg-background shadow-xs">
+                  <Label htmlFor="qon-dcookie" className="text-sm text-muted-foreground">
+                    Cookie header
+                  </Label>
+                  <div className="min-w-0 w-full max-w-full overflow-hidden rounded-lg border border-border/70 bg-background/80 shadow-sm">
                     <Textarea
                       id="qon-dcookie"
                       rows={3}
@@ -851,12 +862,14 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                       value={qonDashboardCookie}
                       onChange={(e) => setQonDashboardCookie(e.target.value)}
                       disabled={saving}
-                      className="box-border min-h-[4.5rem] max-h-48 min-w-0 w-full max-w-full resize-y overflow-x-auto overflow-y-auto whitespace-pre border-0 font-mono text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="box-border min-h-[4.5rem] max-h-48 min-w-0 w-full max-w-full resize-y overflow-x-auto overflow-y-auto whitespace-pre border-0 bg-transparent font-mono text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="qon-duid">Dashboard account UID</Label>
+                  <Label htmlFor="qon-duid" className="text-sm text-muted-foreground">
+                    Dashboard account UID
+                  </Label>
                   <Input
                     id="qon-duid"
                     value={qonDashboardUid}
@@ -867,9 +880,9 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
                 </div>
               </div>
 
-              <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
-                <h4 className="text-sm font-semibold text-foreground">Optional — org-wide REST / GCS / webhook</h4>
-                <p className="text-xs text-muted-foreground">
+              <div className="space-y-3 rounded-xl border border-border/70 bg-background/50 p-4">
+                <h4 className="text-sm font-semibold tracking-tight text-foreground">Optional — org-wide REST / GCS / webhook</h4>
+                <p className="text-xs leading-relaxed text-muted-foreground">
                   Fallback only when no per-app keys are configured. Prefer App → Settings for production.
                 </p>
                 <div className="space-y-2">
@@ -967,7 +980,7 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
             </TabsContent>
 
             <TabsContent value="apple" className="mt-5 min-w-0 space-y-4">
-              <p className="text-sm text-muted-foreground rounded-lg border border-border bg-muted/40 px-3 py-2">
+              <p className="rounded-lg border border-border/70 bg-background/60 px-3 py-2 text-sm leading-relaxed text-muted-foreground">
                 App Store Connect API (ASC key) for sales, finance, analytics, and catalog. In-App Purchase key for
                 StoreKit Server API. Keys are encrypted in the database; paste full <span className="font-mono">.p8</span> PEM
                 including <span className="font-mono">BEGIN/END</span> lines.
@@ -1283,39 +1296,36 @@ export function AddEditAccountModal({ open, onOpenChange, editAccount, onSaved }
               </div>
             </TabsContent>
           </Tabs>
+          </div>
 
-          <DialogFooter className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            {/* Left: Cancel */}
-            <Button
-              type="button"
-              variant="outline"
-              className="bg-transparent order-last sm:order-first"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-
-            {/* Center + Right group */}
-            <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
-              {/* Test Connection */}
-
-
-              {/* Save / Update */}
+          <DialogFooter className="shrink-0 border-t border-border px-4 py-4 sm:px-6">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Button
-                type="submit"
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                type="button"
+                variant="outline"
+                className="w-full bg-transparent sm:w-auto"
+                onClick={() => onOpenChange(false)}
                 disabled={saving}
               >
-                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {saving
-                  ? isEdit
-                    ? "Updating..."
-                    : "Saving..."
-                  : isEdit
-                    ? "Update Account"
-                    : "Save Account"}
+                Cancel
               </Button>
+
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
+                  disabled={saving || isEditNetworkMismatch}
+                >
+                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {saving
+                    ? isEdit
+                      ? "Updating..."
+                      : "Saving..."
+                    : isEdit
+                      ? "Update Account"
+                      : "Save Account"}
+                </Button>
+              </div>
             </div>
           </DialogFooter>
         </form>

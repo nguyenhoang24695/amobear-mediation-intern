@@ -1,24 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useMemo, useEffect } from "react"
-import { useParams } from "next/navigation"
-import Link from "next/link"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useState, useMemo, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { TooltipProvider } from "@/components/ui/tooltip"
+} from "@/components/ui/dropdown-menu";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Search,
   MoreHorizontal,
@@ -31,160 +31,193 @@ import {
   ArrowUp,
   ArrowDown,
   Layers,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useApi } from "@/hooks/use-api"
-import { structureApi } from "@/lib/api/services"
-import { Pagination } from "@/components/shared/pagination"
-import type { MediationGroup } from "@/types/api"
-import { DEPRECATED_METRICS_MAX_YMD } from "@/lib/constants/deprecated-app-metrics"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useApi } from "@/hooks/use-api";
+import { structureApi } from "@/lib/api/services";
+import { Pagination } from "@/components/shared/pagination";
+import type { MediationGroup } from "@/types/api";
+import { DEPRECATED_METRICS_MAX_YMD } from "@/lib/constants/deprecated-app-metrics";
 import {
   MediationGroupAdSourcesCell,
   MediationGroupFormatBadge,
   MediationGroupTargetingCell,
-} from "@/components/mediation/mediation-group-table-cells"
+} from "@/components/mediation/mediation-group-table-cells";
 
 function ymdUtc(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  return d.toISOString().slice(0, 10);
 }
 
-function getDefaultDeprecatedMetricRange(): { startDate: string; endDate: string } {
-  let end = ymdUtc(new Date())
-  if (end > DEPRECATED_METRICS_MAX_YMD) end = DEPRECATED_METRICS_MAX_YMD
-  const endD = new Date(`${end}T00:00:00.000Z`)
-  const startD = new Date(endD)
-  startD.setUTCDate(startD.getUTCDate() - 6)
-  return { startDate: ymdUtc(startD), endDate: end }
+function getDefaultDeprecatedMetricRange(): {
+  startDate: string;
+  endDate: string;
+} {
+  let end = ymdUtc(new Date());
+  if (end > DEPRECATED_METRICS_MAX_YMD) end = DEPRECATED_METRICS_MAX_YMD;
+  const endD = new Date(`${end}T00:00:00.000Z`);
+  const startD = new Date(endD);
+  startD.setUTCDate(startD.getUTCDate() - 6);
+  return { startDate: ymdUtc(startD), endDate: end };
 }
 
-type SortField = "name" | "ecpm" | "revenue"
-type SortDirection = "asc" | "desc"
+type SortField = "name" | "ecpm" | "revenue";
+type SortDirection = "asc" | "desc";
 
 export interface AppMediationGroupsTabProps {
   /** Danh sách mediation groups đã load từ parent (app detail). Nếu có thì tab không gọi API lại. */
-  mediationGroups?: MediationGroup[] | null
+  mediationGroups?: MediationGroup[] | null;
   /** Loading state từ parent khi đang load mediation groups. */
-  loadingMediationGroups?: boolean
+  loadingMediationGroups?: boolean;
 }
 
-export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromParent, loadingMediationGroups: loadingFromParent }: AppMediationGroupsTabProps = {}) {
-  const params = useParams()
-  const appIdFromParams = (params as any)?.id as string | undefined
-  const hasValidAppId = !!appIdFromParams
+export function AppMediationGroupsTab({
+  mediationGroups: mediationGroupsFromParent,
+  loadingMediationGroups: loadingFromParent,
+}: AppMediationGroupsTabProps = {}) {
+  const params = useParams();
+  const appIdFromParams = (params as any)?.id as string | undefined;
+  const hasValidAppId = !!appIdFromParams;
 
-  const useOwnFetch = mediationGroupsFromParent === undefined
-  const initialMetricRange = useMemo(() => getDefaultDeprecatedMetricRange(), [])
-  const [startDate, setStartDate] = useState(initialMetricRange.startDate)
-  const [endDate, setEndDate] = useState(initialMetricRange.endDate)
+  const useOwnFetch = mediationGroupsFromParent === undefined;
+  const initialMetricRange = useMemo(
+    () => getDefaultDeprecatedMetricRange(),
+    [],
+  );
+  const [startDate, setStartDate] = useState(initialMetricRange.startDate);
+  const [endDate, setEndDate] = useState(initialMetricRange.endDate);
 
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
-  const [sortField, setSortField] = useState<SortField>("revenue")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<SortField>("revenue");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const { data: app } = useApi(
     () => structureApi.getAppByAppId(appIdFromParams!),
-    { enabled: useOwnFetch && hasValidAppId, cacheKey: useOwnFetch && hasValidAppId ? `app_detail_${appIdFromParams}` : undefined },
-  )
-  const { data: mediationGroupsFetched, loading: loadingFetched } = useApi<MediationGroup[]>(
-    () => structureApi.getAppMediationGroups(app!.id, { startDate, endDate }),
     {
-      enabled: useOwnFetch && !!app?.id,
-      cacheKey: useOwnFetch && app ? `app_mediation_groups_${app.appId}_${startDate}_${endDate}` : undefined,
+      enabled: useOwnFetch && hasValidAppId,
+      cacheKey:
+        useOwnFetch && hasValidAppId
+          ? `app_detail_${appIdFromParams}`
+          : undefined,
     },
-  )
+  );
+  const { data: mediationGroupsFetched, loading: loadingFetched } = useApi<
+    MediationGroup[]
+  >(() => structureApi.getAppMediationGroups(app!.id, { startDate, endDate }), {
+    enabled: useOwnFetch && !!app?.id,
+    cacheKey:
+      useOwnFetch && app
+        ? `app_mediation_groups_${app.appId}_${startDate}_${endDate}`
+        : undefined,
+  });
 
-  const mediationGroups = useOwnFetch ? mediationGroupsFetched : mediationGroupsFromParent ?? null
-  const loading = useOwnFetch ? loadingFetched : (loadingFromParent ?? false)
+  const mediationGroups = useOwnFetch
+    ? mediationGroupsFetched
+    : (mediationGroupsFromParent ?? null);
+  const loading = useOwnFetch ? loadingFetched : (loadingFromParent ?? false);
 
   const filteredGroups = useMemo(() => {
-    if (!mediationGroups) return []
+    if (!mediationGroups) return [];
     return mediationGroups.filter((group) => {
       if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase()
-        const name = (group.displayName || group.name || "").toLowerCase()
-        const mediationGroupId = (group.mediationGroupId || "").toLowerCase()
-        if (!name.includes(searchLower) && !mediationGroupId.includes(searchLower)) {
-          return false
+        const searchLower = searchQuery.toLowerCase();
+        const name = (group.displayName || group.name || "").toLowerCase();
+        const mediationGroupId = (group.mediationGroupId || "").toLowerCase();
+        if (
+          !name.includes(searchLower) &&
+          !mediationGroupId.includes(searchLower)
+        ) {
+          return false;
         }
       }
-      return true
-    })
-  }, [mediationGroups, searchQuery])
+      return true;
+    });
+  }, [mediationGroups, searchQuery]);
 
   const sortedGroups = useMemo(() => {
-    const multiplier = sortDirection === "asc" ? 1 : -1
+    const multiplier = sortDirection === "asc" ? 1 : -1;
     return [...filteredGroups].sort((a, b) => {
       switch (sortField) {
         case "name": {
-          const nameA = (a.displayName || a.name || "").toLowerCase()
-          const nameB = (b.displayName || b.name || "").toLowerCase()
-          return multiplier * nameA.localeCompare(nameB)
+          const nameA = (a.displayName || a.name || "").toLowerCase();
+          const nameB = (b.displayName || b.name || "").toLowerCase();
+          return multiplier * nameA.localeCompare(nameB);
         }
         case "ecpm":
-          return multiplier * ((a.ecpm || 0) - (b.ecpm || 0))
+          return multiplier * ((a.ecpm || 0) - (b.ecpm || 0));
         case "revenue":
-          return multiplier * (((a as any).revenue || 0) - ((b as any).revenue || 0))
+          return (
+            multiplier * (((a as any).revenue || 0) - ((b as any).revenue || 0))
+          );
         default:
-          return 0
+          return 0;
       }
-    })
-  }, [filteredGroups, sortField, sortDirection])
+    });
+  }, [filteredGroups, sortField, sortDirection]);
 
   // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(sortedGroups.length / pageSize))
+  const totalPages = Math.max(1, Math.ceil(sortedGroups.length / pageSize));
   const paginatedGroups = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    const endIndex = startIndex + pageSize
-    return sortedGroups.slice(startIndex, endIndex)
-  }, [sortedGroups, currentPage, pageSize])
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return sortedGroups.slice(startIndex, endIndex);
+  }, [sortedGroups, currentPage, pageSize]);
 
   // Reset to page 1 when search, sort, or metrics date range changes
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, sortField, sortDirection, startDate, endDate])
+    setCurrentPage(1);
+  }, [searchQuery, sortField, sortDirection, startDate, endDate]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
-      setSortField(field)
-      setSortDirection("desc")
+      setSortField(field);
+      setSortDirection("desc");
     }
-  }
-
+  };
 
   const toggleSelectGroup = (groupId: number) => {
-    const idStr = groupId.toString()
+    const idStr = groupId.toString();
     if (selectedGroups.includes(idStr)) {
-      setSelectedGroups(selectedGroups.filter((id) => id !== idStr))
+      setSelectedGroups(selectedGroups.filter((id) => id !== idStr));
     } else {
-      setSelectedGroups([...selectedGroups, idStr])
+      setSelectedGroups([...selectedGroups, idStr]);
     }
-  }
+  };
 
   const toggleSelectAll = () => {
-    const paginatedGroupIds = paginatedGroups.map((g) => g.id.toString())
-    const allPaginatedSelected = paginatedGroupIds.every((id) => selectedGroups.includes(id))
-    
+    const paginatedGroupIds = paginatedGroups.map((g) => g.id.toString());
+    const allPaginatedSelected = paginatedGroupIds.every((id) =>
+      selectedGroups.includes(id),
+    );
+
     if (allPaginatedSelected) {
       // Deselect all items on current page
-      setSelectedGroups(selectedGroups.filter((id) => !paginatedGroupIds.includes(id)))
+      setSelectedGroups(
+        selectedGroups.filter((id) => !paginatedGroupIds.includes(id)),
+      );
     } else {
       // Select all items on current page (keep items from other pages)
-      const newSelection = [...selectedGroups]
+      const newSelection = [...selectedGroups];
       paginatedGroupIds.forEach((id) => {
         if (!newSelection.includes(id)) {
-          newSelection.push(id)
+          newSelection.push(id);
         }
-      })
-      setSelectedGroups(newSelection)
+      });
+      setSelectedGroups(newSelection);
     }
-  }
+  };
 
-  const SortHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+  const SortHeader = ({
+    field,
+    children,
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+  }) => (
     <button
       onClick={() => handleSort(field)}
       className="flex items-center gap-1 transition-colors hover:text-foreground"
@@ -200,14 +233,22 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
         <ArrowUpDown className="w-3 h-3 opacity-50" />
       )}
     </button>
-  )
+  );
 
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-4">
         {useOwnFetch ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300">
-            Metrics từ <strong>bronze.mediation_table_bk</strong>, khoảng ngày đến <strong>{DEPRECATED_METRICS_MAX_YMD}</strong>.
+          <p className="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+            Metrics từ{" "}
+            <strong className="text-foreground">
+              bronze.mediation_table_bk
+            </strong>
+            , khoảng ngày đến{" "}
+            <strong className="text-foreground">
+              {DEPRECATED_METRICS_MAX_YMD}
+            </strong>
+            .
           </p>
         ) : null}
         {/* Action Bar */}
@@ -215,7 +256,10 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
           {useOwnFetch ? (
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
-                <Label htmlFor="deprecated-mg-start" className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="deprecated-mg-start"
+                  className="text-xs text-muted-foreground"
+                >
                   Start date
                 </Label>
                 <Input
@@ -224,16 +268,22 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                   max={DEPRECATED_METRICS_MAX_YMD}
                   value={startDate}
                   onChange={(e) => {
-                    const v = e.target.value
-                    const c = v > DEPRECATED_METRICS_MAX_YMD ? DEPRECATED_METRICS_MAX_YMD : v
-                    setStartDate(c)
-                    if (c > endDate) setEndDate(c)
+                    const v = e.target.value;
+                    const c =
+                      v > DEPRECATED_METRICS_MAX_YMD
+                        ? DEPRECATED_METRICS_MAX_YMD
+                        : v;
+                    setStartDate(c);
+                    if (c > endDate) setEndDate(c);
                   }}
                   className="h-10 w-[158px] bg-card"
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="deprecated-mg-end" className="text-xs text-muted-foreground">
+                <Label
+                  htmlFor="deprecated-mg-end"
+                  className="text-xs text-muted-foreground"
+                >
                   End date
                 </Label>
                 <Input
@@ -242,10 +292,13 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                   max={DEPRECATED_METRICS_MAX_YMD}
                   value={endDate}
                   onChange={(e) => {
-                    const v = e.target.value
-                    const c = v > DEPRECATED_METRICS_MAX_YMD ? DEPRECATED_METRICS_MAX_YMD : v
-                    setEndDate(c)
-                    if (startDate > c) setStartDate(c)
+                    const v = e.target.value;
+                    const c =
+                      v > DEPRECATED_METRICS_MAX_YMD
+                        ? DEPRECATED_METRICS_MAX_YMD
+                        : v;
+                    setEndDate(c);
+                    if (startDate > c) setStartDate(c);
                   }}
                   className="h-10 w-[158px] bg-card"
                 />
@@ -277,7 +330,9 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                     <Checkbox
                       checked={
                         paginatedGroups.length > 0 &&
-                        paginatedGroups.every((g) => selectedGroups.includes(g.id.toString()))
+                        paginatedGroups.every((g) =>
+                          selectedGroups.includes(g.id.toString()),
+                        )
                       }
                       onCheckedChange={toggleSelectAll}
                     />
@@ -286,8 +341,12 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                     <SortHeader field="name">Group Name</SortHeader>
                   </th>
                   <th className="px-4 py-3 text-left">Format</th>
-                  <th className="px-4 py-3 text-left min-w-[140px]">Ad Sources</th>
-                  <th className="px-4 py-3 text-left min-w-[120px]">Targeting</th>
+                  <th className="px-4 py-3 text-left min-w-[140px]">
+                    Ad Sources
+                  </th>
+                  <th className="px-4 py-3 text-left min-w-[120px]">
+                    Targeting
+                  </th>
                   <th className="px-4 py-3 text-right">
                     <SortHeader field="revenue">Revenue</SortHeader>
                   </th>
@@ -301,13 +360,19 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
               <tbody className="divide-y divide-border">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={9}
+                      className="px-4 py-8 text-center text-sm text-muted-foreground"
+                    >
                       Loading mediation groups...
                     </td>
                   </tr>
                 ) : paginatedGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={9}
+                      className="px-4 py-8 text-center text-sm text-muted-foreground"
+                    >
                       {searchQuery
                         ? "No mediation groups found matching your search."
                         : "No mediation groups found for this app."}
@@ -315,17 +380,22 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                   </tr>
                 ) : (
                   paginatedGroups.map((group) => {
-                    const groupIdStr = group.id.toString()
+                    const groupIdStr = group.id.toString();
                     const adSourcesInfo =
-                      group.adSourcesInfo || (group.adSources || []).map((id) => ({ adSourceId: id, title: id }))
-                    const countries = group.countries || []
+                      group.adSourcesInfo ||
+                      (group.adSources || []).map((id) => ({
+                        adSourceId: id,
+                        title: id,
+                      }));
+                    const countries = group.countries || [];
 
                     return (
                       <tr
                         key={group.id}
                         className={cn(
                           "transition-colors hover:bg-muted/50",
-                          selectedGroups.includes(groupIdStr) && "bg-primary/10 hover:bg-primary/10",
+                          selectedGroups.includes(groupIdStr) &&
+                            "bg-primary/10 hover:bg-primary/10",
                           group.status === "Paused" && "opacity-60",
                         )}
                       >
@@ -340,21 +410,27 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                             href={`/mediation/${group.mediationGroupId}`}
                             className="text-sm font-medium text-primary hover:underline"
                           >
-                            {group.displayName || group.name || "Unnamed Mediation Group"}
+                            {group.displayName ||
+                              group.name ||
+                              "Unnamed Mediation Group"}
                           </Link>
                         </td>
                         <td className="px-4 py-3">
                           <MediationGroupFormatBadge format={group.adFormat} />
                         </td>
                         <td className="px-4 py-3">
-                          <MediationGroupAdSourcesCell adSourcesInfo={adSourcesInfo} />
+                          <MediationGroupAdSourcesCell
+                            adSourcesInfo={adSourcesInfo}
+                          />
                         </td>
                         <td className="px-4 py-3">
                           <MediationGroupTargetingCell countries={countries} />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className="text-sm font-medium text-foreground">
-                            {(group.revenue || 0) > 0 ? `$${(group.revenue || 0).toFixed(2)}` : "—"}
+                            {(group.revenue || 0) > 0
+                              ? `$${(group.revenue || 0).toFixed(2)}`
+                              : "—"}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -364,14 +440,22 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                         </td>
                         <td className="px-4 py-3">
                           {group.status === "ENABLED" || !group.status ? (
-                            <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300">Enabled</Badge>
+                            <Badge className="border-0 bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300">
+                              Enabled
+                            </Badge>
                           ) : (
-                            <Badge className="border-0 bg-muted text-muted-foreground">Paused</Badge>
+                            <Badge className="border-0 bg-muted text-muted-foreground">
+                              Paused
+                            </Badge>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="outline" size="sm" className="h-8 gap-1 bg-background text-xs">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1 bg-background text-xs"
+                            >
                               <Layers className="w-3 h-3" />
                               Waterfall
                             </Button>
@@ -383,7 +467,10 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem asChild>
-                                  <Link href={`/mediation/${group.mediationGroupId}`} className="flex items-center gap-2 cursor-pointer">
+                                  <Link
+                                    href={`/mediation/${group.mediationGroupId}`}
+                                    className="flex items-center gap-2 cursor-pointer"
+                                  >
                                     <Eye className="w-4 h-4" />
                                     View Details
                                   </Link>
@@ -394,7 +481,8 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem className="gap-2 text-amber-600 dark:text-amber-400">
-                                  {group.status === "Active" || !group.status ? (
+                                  {group.status === "Active" ||
+                                  !group.status ? (
                                     <>
                                       <Pause className="w-4 h-4" />
                                       Pause
@@ -415,7 +503,7 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
                           </div>
                         </td>
                       </tr>
-                    )
+                    );
                   })
                 )}
               </tbody>
@@ -430,8 +518,8 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
               pageSize={pageSize}
               onPageChange={(page) => setCurrentPage(page)}
               onPageSizeChange={(size) => {
-                setPageSize(size)
-                setCurrentPage(1)
+                setPageSize(size);
+                setCurrentPage(1);
               }}
               itemName="mediation groups"
             />
@@ -439,5 +527,5 @@ export function AppMediationGroupsTab({ mediationGroups: mediationGroupsFromPare
         </Card>
       </div>
     </TooltipProvider>
-  )
+  );
 }

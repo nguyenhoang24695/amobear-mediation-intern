@@ -69,10 +69,10 @@ function formatNetProfitMarginTooltip(margin: number | null): string {
 }
 
 function getStatus(completion?: number | null) {
-  if (completion == null) return { label: "No target", className: "bg-slate-100 text-slate-600" }
-  if (completion >= 100) return { label: "Achieved", className: "bg-green-100 text-green-700" }
-  if (completion >= 80) return { label: "On track", className: "bg-blue-100 text-blue-700" }
-  return { label: "Behind", className: "bg-amber-100 text-amber-700" }
+  if (completion == null) return { label: "No target", className: "bg-muted text-muted-foreground" }
+  if (completion >= 100) return { label: "Achieved", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" }
+  if (completion >= 80) return { label: "On track", className: "bg-blue-500/10 text-blue-700 dark:text-blue-400" }
+  return { label: "Behind", className: "bg-amber-500/10 text-amber-700 dark:text-amber-400" }
 }
 
 function parseMonthValue(month: string): Date {
@@ -142,7 +142,7 @@ function TeamProfitPlanMetricCell({
               {plan.completionPercent == null ? "—" : `${plan.completionPercent.toFixed(2)}%`}
             </Badge>
           ) : (
-            <span className="text-sm text-slate-400">—</span>
+            <span className="text-sm text-muted-foreground">—</span>
           )}
         </TableCell>
       )
@@ -155,7 +155,7 @@ function TeamProfitPlanMetricCell({
         <TableCell className={cellClassName}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+              <span className="cursor-default underline decoration-dotted decoration-border underline-offset-2">
                 {formatNetProfitMarginDisplay(netProfitMargin)}
               </span>
             </TooltipTrigger>
@@ -290,12 +290,12 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
   }
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-border bg-card">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Target className="h-4 w-4 text-blue-600" />
+              <Target className="h-4 w-4 text-primary" />
               Monthly Revenue Plan
             </CardTitle>
             <CardDescription>
@@ -306,7 +306,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={() => setExpanded((current) => !current)}
             aria-label={expanded ? "Collapse revenue plan" : "Expand revenue plan"}
             aria-expanded={expanded}
@@ -324,7 +324,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 shrink-0 bg-white"
+                className="h-9 w-9 shrink-0 bg-background"
                 onClick={() => setMonth((current) => shiftMonth(current, -1))}
                 aria-label="Previous month"
                 title="Previous month"
@@ -340,7 +340,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                   type="month"
                   value={month}
                   onChange={(event) => setMonth(event.target.value)}
-                  className="w-[148px] bg-white text-center"
+                  className="w-[148px] bg-background text-center"
                 />
               </div>
               {canGoNextMonth ? (
@@ -348,7 +348,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 shrink-0 bg-white"
+                  className="h-9 w-9 shrink-0 bg-background"
                   onClick={() => setMonth((current) => shiftMonth(current, 1))}
                   aria-label="Next month"
                   title="Next month"
@@ -372,7 +372,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                 <Button
                   type="button"
                   variant="outline"
-                  className="bg-white"
+                  className="bg-background"
                   onClick={() => void handleExportData()}
                   disabled={loading || exportingData || plans.length === 0 || !orgId}
                 >
@@ -391,40 +391,40 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-6 text-sm text-slate-500">
+            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Loading revenue plans...
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-border bg-card">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
                     <TableHead rowSpan={2} className="min-w-[220px] align-bottom">
                       App
                     </TableHead>
                     <TableHead
                       colSpan={REVENUE_COLUMNS.length}
-                      className="border-l border-slate-200 bg-blue-50/80 text-center text-xs font-semibold text-blue-700"
+                      className="border-l border-border bg-blue-500/10 text-center text-xs font-semibold text-blue-700 dark:text-blue-400"
                     >
                       Revenue
                     </TableHead>
                     <TableHead
                       colSpan={PERFORMANCE_COLUMNS.length}
-                      className="border-l border-slate-200 bg-emerald-50/80 text-center text-xs font-semibold text-emerald-700"
+                      className="border-l border-border bg-emerald-500/10 text-center text-xs font-semibold text-emerald-700 dark:text-emerald-400"
                     >
                       Performance
                     </TableHead>
                   </TableRow>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
                     {REVENUE_PLAN_COLUMNS.map((column, index) => (
                       <TableHead
                         key={column.id}
                         className={cn(
                           column.minWidthClass,
-                          "text-right text-xs font-medium text-slate-600",
-                          index === 0 && "border-l border-slate-200",
-                          index === REVENUE_PLAN_COLUMNS.length - 1 && "border-r border-slate-200",
+                          "text-right text-xs font-medium text-muted-foreground",
+                          index === 0 && "border-l border-border",
+                          index === REVENUE_PLAN_COLUMNS.length - 1 && "border-r border-border",
                         )}
                       >
                         {column.label}
@@ -437,15 +437,15 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                     <TableRow>
                       <TableCell
                         colSpan={1 + METRIC_COLUMN_COUNT}
-                        className="py-8 text-center text-sm text-slate-500"
+                        className="py-8 text-center text-sm text-muted-foreground"
                       >
                         No revenue plans for this month yet.
                       </TableCell>
                     </TableRow>
                   ) : (
                     <>
-                      <TableRow className="bg-slate-50/90 font-semibold hover:bg-slate-50/90">
-                        <TableCell className="text-sm text-slate-900">Total</TableCell>
+                      <TableRow className="bg-muted/60 font-semibold hover:bg-muted/60">
+                        <TableCell className="text-sm text-foreground">Total</TableCell>
                         {REVENUE_PLAN_COLUMNS.map((column) => {
                           const cellClassName = cn(column.minWidthClass, "text-right text-sm tabular-nums")
                           switch (column.id) {
@@ -466,7 +466,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                               return (
                                 <TableCell key={column.id} className={cn(column.minWidthClass, "text-right")}>
                                   {totals.completion == null ? (
-                                    <span className="text-sm font-normal text-slate-400">—</span>
+                                    <span className="text-sm font-normal text-muted-foreground">—</span>
                                   ) : (
                                     <Badge className={cn("w-fit font-semibold", status.className)} variant="secondary">
                                       {totals.completion.toFixed(2)}%
@@ -492,7 +492,7 @@ export function TeamProfitPlanCard({ teamId, teamName }: TeamProfitPlanCardProps
                                 <TableCell key={column.id} className={cellClassName}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <span className="cursor-default underline decoration-dotted decoration-slate-300 underline-offset-2">
+                                      <span className="cursor-default underline decoration-dotted decoration-border underline-offset-2">
                                         {formatNetProfitMarginDisplay(totals.netProfitMargin)}
                                       </span>
                                     </TooltipTrigger>

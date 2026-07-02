@@ -31,6 +31,7 @@ import {
 import { Pagination } from "@/components/shared/pagination"
 import { NoPermissionView } from "@/components/shared/no-permission-view"
 import { jobSchedulesApi } from "@/lib/api/services"
+import { cn } from "@/lib/utils"
 import { hasScreenFunction } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import type { JobRunDetailDto, JobRunListItemDto } from "@/types/api"
@@ -42,6 +43,16 @@ function statusVariant(status: string) {
   if (status === "completed") return "default"
   if (status === "failed" || status === "interrupted") return "destructive"
   return "secondary"
+}
+
+function statusBadgeClass(status: string) {
+  if (status === "completed") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300"
+  }
+  if (status === "failed" || status === "interrupted") {
+    return "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/10"
+  }
+  return "border-amber-500/20 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
 }
 
 function formatDuration(ms?: number | null) {
@@ -115,7 +126,7 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
   if (!canView) return <NoPermissionView />
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <Button variant="ghost" size="sm" asChild className="mb-2 px-0">
@@ -124,10 +135,10 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
               Jobs
             </Link>
           </Button>
-          <h1 className="truncate text-2xl font-semibold text-slate-900">Job Run History</h1>
-          <p className="truncate text-sm text-slate-500">{decodedJobId}</p>
+          <h1 className="truncate text-2xl font-semibold text-foreground">Job Run History</h1>
+          <p className="truncate text-sm text-muted-foreground">{decodedJobId}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Select
             value={status}
             onValueChange={(value) => {
@@ -135,7 +146,7 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
               setPage(1)
             }}
           >
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-full sm:w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -146,7 +157,7 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
               <SelectItem value="interrupted">Interrupted</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => void load()} disabled={loading}>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -157,8 +168,8 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Runs</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto rounded-md border">
+        <CardContent className="space-y-4">
+          <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -174,14 +185,14 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-sm text-slate-500">
+                    <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
                       <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
                       Loading history...
                     </TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-sm text-slate-500">
+                    <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
                       No runs recorded yet.
                     </TableCell>
                   </TableRow>
@@ -189,20 +200,22 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
                   items.map((run) => (
                     <TableRow key={run.id}>
                       <TableCell>
-                        <Badge variant={statusVariant(run.status) as any}>{run.status}</Badge>
+                        <Badge variant={statusVariant(run.status) as any} className={statusBadgeClass(run.status)}>
+                          {run.status}
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-slate-900">
+                        <div className="text-sm text-foreground">
                           {format(new Date(run.startedAt), "yyyy-MM-dd HH:mm:ss")}
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(run.startedAt), { addSuffix: true })}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{formatDuration(run.durationMs)}</TableCell>
                       <TableCell className="text-sm">{run.triggerSource}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500">{run.hangfireJobId || "-"}</TableCell>
-                      <TableCell className="max-w-72 truncate text-sm text-red-600">
+                      <TableCell className="font-mono text-xs text-muted-foreground">{run.hangfireJobId || "-"}</TableCell>
+                      <TableCell className="max-w-72 truncate text-sm text-destructive">
                         {run.errorMessage || "-"}
                       </TableCell>
                       <TableCell className="text-right">
@@ -217,6 +230,71 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
               </TableBody>
             </Table>
           </div>
+
+          <div className="grid gap-3 md:hidden">
+            {loading ? (
+              <Card className="border-border bg-card">
+                <CardContent className="flex min-h-32 items-center justify-center py-8 text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Loading history...
+                </CardContent>
+              </Card>
+            ) : items.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                  No runs recorded yet.
+                </CardContent>
+              </Card>
+            ) : (
+              items.map((run) => (
+                <Card key={run.id} className="border-border bg-card shadow-sm">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={statusVariant(run.status) as any} className={statusBadgeClass(run.status)}>
+                            {run.status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(run.startedAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-medium text-foreground">
+                          {format(new Date(run.startedAt), "yyyy-MM-dd HH:mm:ss")}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Trigger: {run.triggerSource}
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => void openDetail(run)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Logs
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg border border-border bg-muted/30 p-3">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Duration</p>
+                        <p className="mt-1 font-medium text-foreground">{formatDuration(run.durationMs)}</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 p-3">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Hangfire ID</p>
+                        <p className="mt-1 break-all font-mono text-xs text-foreground">{run.hangfireJobId || "-"}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-border bg-muted/30 p-3">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Error</p>
+                      <p className={cn("mt-1 text-sm", run.errorMessage ? "text-destructive" : "text-muted-foreground")}>
+                        {run.errorMessage || "No error"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
           <Pagination
             currentPage={page}
             totalPages={totalPages}
@@ -227,34 +305,61 @@ export function JobHistoryContent({ jobId }: { jobId: string }) {
               setPageSize(size)
               setPage(1)
             }}
+            itemName="runs"
           />
         </CardContent>
       </Card>
 
       <Dialog open={!!detail || detailLoading} onOpenChange={(open) => !open && setDetail(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] flex-col overflow-hidden p-0 sm:max-h-[calc(100dvh-2rem)] sm:w-[min(92vw,64rem)] sm:max-w-[64rem]">
+          <DialogHeader className="border-b border-border px-4 py-4 pr-12 text-left sm:px-6">
             <DialogTitle>Run Logs</DialogTitle>
           </DialogHeader>
-          {detailLoading && !detail ? (
-            <div className="flex h-40 items-center justify-center text-sm text-slate-500">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Loading logs...
-            </div>
-          ) : detail ? (
-            <div className="space-y-3">
-              <div className="grid gap-2 text-sm sm:grid-cols-3">
-                <div><span className="text-slate-500">Status:</span> {detail.status}</div>
-                <div><span className="text-slate-500">Trigger:</span> {detail.triggerSource}</div>
-                <div><span className="text-slate-500">Duration:</span> {formatDuration(detail.durationMs)}</div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+            {detailLoading && !detail ? (
+              <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Loading logs...
               </div>
-              <pre className="max-h-[60vh] overflow-auto rounded-md bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
-                {detail.logs.length > 0
-                  ? detail.logs.map((line) => `[${line.lineNo}] ${format(new Date(line.loggedAt), "yyyy-MM-dd HH:mm:ss")} ${line.message}`).join("\n")
-                  : "No log lines captured."}
-              </pre>
-            </div>
-          ) : null}
+            ) : detail ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 text-sm sm:grid-cols-3">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Status</span>
+                    <p className="mt-1 font-medium text-foreground">{detail.status}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Trigger</span>
+                    <p className="mt-1 font-medium text-foreground">{detail.triggerSource}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">Duration</span>
+                    <p className="mt-1 font-medium text-foreground">{formatDuration(detail.durationMs)}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div className="border-b border-border px-4 py-3">
+                    <p className="text-sm font-semibold text-foreground">Log Output</p>
+                    <p className="text-xs text-muted-foreground">
+                      {detail.logs.length} line{detail.logs.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <pre className="max-h-[60dvh] overflow-auto bg-muted/20 p-4 text-xs leading-relaxed text-foreground">
+                    {detail.logs.length > 0
+                      ? detail.logs
+                          .map(
+                            (line) =>
+                              `[${line.lineNo}] ${format(new Date(line.loggedAt), "yyyy-MM-dd HH:mm:ss")} ${line.message}`,
+                          )
+                          .join("\n")
+                      : "No log lines captured."}
+                  </pre>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

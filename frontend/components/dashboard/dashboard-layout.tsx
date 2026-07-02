@@ -17,7 +17,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <DashboardDateProvider>
-      <div className="min-h-screen overflow-x-hidden bg-background pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-foreground md:pb-0">
+      <div className="min-h-[100dvh] overflow-x-hidden bg-background pb-[calc(6.5rem+env(safe-area-inset-bottom))] text-foreground md:pb-0">
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
         <div

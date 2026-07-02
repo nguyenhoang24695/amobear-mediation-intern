@@ -147,25 +147,32 @@ const userStatusConfig: Record<
 > = {
   active: {
     dot: "bg-emerald-500",
-    badge: "border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+    badge: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
     label: "Active",
   },
   inactive: {
     dot: "bg-muted-foreground",
-    badge: "border-border text-muted-foreground",
+    badge: "border-border bg-muted/50 text-muted-foreground",
     label: "Inactive",
   },
   locked: {
     dot: "bg-orange-500",
-    badge: "border-orange-500/30 text-orange-700 dark:text-orange-300",
+    badge: "border-orange-500/20 bg-orange-500/10 text-orange-700",
     label: "Locked",
   },
   invited: {
     dot: "bg-amber-500",
-    badge: "border-amber-500/30 text-amber-700 dark:text-amber-300",
+    badge: "border-amber-500/20 bg-amber-500/10 text-amber-700",
     label: "Invited",
   },
 };
+
+const themePills = {
+  role: "border-primary/20 bg-primary/10 text-primary",
+  positive: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
+  warning: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+  neutral: "border-border bg-muted/50 text-muted-foreground",
+} as const;
 
 function formatDateTime(value?: string) {
   if (!value) return "Never";
@@ -485,7 +492,7 @@ export function UserDetailContent({
     });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Back Link */}
       <Link
         href={backHref}
@@ -496,8 +503,8 @@ export function UserDetailContent({
       </Link>
 
       {/* Page Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
           <div className="relative">
             <Avatar className="h-16 w-16">
               {user.avatarUrl && <AvatarImage src={user.avatarUrl} />}
@@ -515,14 +522,14 @@ export function UserDetailContent({
             {/* Online status mock */}
             <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-background" />
           </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold ">{user.fullName || "User"}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl font-bold">{user.fullName || "User"}</h1>
               <div className="flex flex-wrap items-center gap-2">
                 {userRoleKeys.map((roleKey, index) => (
                   <Badge
                     key={roleKey}
-                    className="bg-purple-500/10 text-purple-700 dark:text-purple-300 capitalize"
+                    className={cn(themePills.role, "capitalize")}
                   >
                     {user.roleNames?.[index] ||
                       roles.find((r) => r.roleKey === roleKey)?.name ||
@@ -534,7 +541,7 @@ export function UserDetailContent({
                 {statusMeta.label}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="mt-1 flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 {user.email}
               </span>
@@ -552,8 +559,8 @@ export function UserDetailContent({
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button variant="outline" asChild className="w-full sm:w-auto">
             <Link
               href={buildActivityLogsHref({
                 domain: "user",
@@ -566,7 +573,11 @@ export function UserDetailContent({
             </Link>
           </Button>
           {canManageTargetUser && (
-            <Button variant="outline" onClick={() => setEditUserOpen(true)}>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setEditUserOpen(true)}
+            >
               <Edit className="w-4 h-4 mr-2" />
               Edit User
             </Button>
@@ -605,21 +616,29 @@ export function UserDetailContent({
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="sessions">Sessions</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 bg-muted p-1 sm:inline-flex sm:w-fit">
+          <TabsTrigger value="overview" className="px-3 data-[state=active]:bg-background sm:px-4">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="px-3 data-[state=active]:bg-background sm:px-4">
+            Permissions
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="px-3 data-[state=active]:bg-background sm:px-4">
+            Activity
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="px-3 data-[state=active]:bg-background sm:px-4">
+            Sessions
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-6">
             {/* Left Column */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="space-y-4 lg:col-span-3 lg:space-y-6">
               {/* Profile Information */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
                   <CardTitle className="text-base font-semibold">
                     Profile Information
                   </CardTitle>
@@ -627,6 +646,7 @@ export function UserDetailContent({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="w-full sm:w-auto"
                       onClick={() => setEditUserOpen(true)}
                     >
                       <Edit className="w-4 h-4 mr-1" />
@@ -635,31 +655,31 @@ export function UserDetailContent({
                   )}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <p className="text-xs text-muted-foreground">
                         First Name
                       </p>
-                      <p className="text-sm font-medium ">
+                      <p className="text-sm font-medium">
                         {user.firstName || "-"}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Last Name</p>
-                      <p className="text-sm font-medium ">
+                      <p className="text-sm font-medium">
                         {user.lastName || "-"}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Email</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm font-medium ">{user.email}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="min-w-0 break-all text-sm font-medium">{user.email}</p>
                         <Badge
                           variant="outline"
                           className={
                             user.emailVerified
-                              ? "text-xs border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                              : "text-xs border-border text-muted-foreground"
+                              ? cn("text-xs", themePills.positive)
+                              : cn("text-xs", themePills.neutral)
                           }
                         >
                           {user.emailVerified ? "Verified" : "Unverified"}
@@ -668,7 +688,7 @@ export function UserDetailContent({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Phone</p>
-                      <p className="text-sm font-medium ">
+                      <p className="text-sm font-medium">
                         {user.phone || "-"}
                       </p>
                     </div>
@@ -688,7 +708,7 @@ export function UserDetailContent({
                         ))}
                       </div>
                       {hasSuperAdminRole(user.role, user.roles) && (
-                        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                        <p className={cn("mt-2 text-xs", themePills.warning)}>
                           Role assignment is locked for super_admin users.
                         </p>
                       )}
@@ -697,7 +717,7 @@ export function UserDetailContent({
                       <p className="text-xs text-muted-foreground">
                         Organization
                       </p>
-                      <p className="text-sm font-medium ">
+                      <p className="text-sm font-medium">
                         {user.organization?.name || "-"}
                       </p>
                     </div>
@@ -707,7 +727,7 @@ export function UserDetailContent({
 
               {/* Teams */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-semibold">
                       Teams
@@ -720,6 +740,7 @@ export function UserDetailContent({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="w-full sm:w-auto"
                       onClick={() => setAddToTeamOpen(true)}
                     >
                       <Plus className="w-4 h-4 mr-1" />
@@ -732,12 +753,12 @@ export function UserDetailContent({
                     {user.teams?.map((team) => (
                       <div
                         key={team.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        className="flex flex-col gap-3 rounded-lg bg-muted/50 p-3 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <span className="text-sm font-medium ">
+                        <span className="min-w-0 text-sm font-medium">
                           {team.name}
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Badge
                             variant="outline"
                             className="text-xs capitalize"
@@ -748,7 +769,7 @@ export function UserDetailContent({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-7 w-7 shrink-0"
                               aria-label={`Remove from ${team.name}`}
                               onClick={() =>
                                 handleRemoveTeamClick({
@@ -774,7 +795,7 @@ export function UserDetailContent({
             </div>
 
             {/* Right Column */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-4 lg:col-span-2 lg:space-y-6">
               {/* Account Status */}
               <Card>
                 <CardHeader className="pb-2">
@@ -783,7 +804,7 @@ export function UserDetailContent({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Status
                     </span>
@@ -796,35 +817,35 @@ export function UserDetailContent({
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Last Login
                     </span>
-                    <span className="text-sm ">
+                    <span className="text-right text-sm">
                       {formatDateTime(user.lastLoginAt)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Last Login IP
                     </span>
-                    <span className="text-sm ">{user.lastLoginIp || "-"}</span>
+                    <span className="text-right text-sm">{user.lastLoginIp || "-"}</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Password Policy
                     </span>
-                    <span className="text-sm ">
+                    <span className="text-right text-sm">
                       {user.mustChangePassword
                         ? "Must change on next login"
                         : "No forced change"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Password Updated
                     </span>
-                    <span className="text-sm ">
+                    <span className="text-right text-sm">
                       {formatDateTime(user.passwordChangedAt)}
                     </span>
                   </div>
@@ -839,27 +860,27 @@ export function UserDetailContent({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Apps with Access
                     </span>
-                    <span className="text-sm font-medium ">
+                    <span className="text-right text-sm font-medium">
                       {permissionsList.length}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Direct Permissions
                     </span>
-                    <span className="text-sm font-medium ">
+                    <span className="text-right text-sm font-medium">
                       {permissionsList.length}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
                       Team-inherited
                     </span>
-                    <span className="text-sm font-medium ">0</span>
+                    <span className="text-right text-sm font-medium">0</span>
                   </div>
                   <Button
                     variant="link"
@@ -876,22 +897,22 @@ export function UserDetailContent({
         {/* Permissions Tab */}
         <TabsContent value="permissions" className="mt-6">
           <Tabs defaultValue="direct" className="space-y-6">
-            <TabsList className="h-10 bg-muted p-1">
+            <TabsList className="grid h-auto w-full grid-cols-1 bg-muted p-1 sm:grid-cols-3">
               <TabsTrigger
                 value="direct"
-                className="px-4 data-[state=active]:bg-background"
+                className="px-3 data-[state=active]:bg-background sm:px-4"
               >
                 Direct Permissions
               </TabsTrigger>
               <TabsTrigger
                 value="meta"
-                className="px-4 data-[state=active]:bg-background"
+                className="px-3 data-[state=active]:bg-background sm:px-4"
               >
                 Meta Permission
               </TabsTrigger>
               <TabsTrigger
                 value="tiktok"
-                className="px-4 data-[state=active]:bg-background"
+                className="px-3 data-[state=active]:bg-background sm:px-4"
               >
                 TikTok Permission
               </TabsTrigger>
@@ -899,7 +920,7 @@ export function UserDetailContent({
 
             <TabsContent value="direct" className="space-y-6">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-semibold">
                       Direct Permissions
@@ -951,13 +972,13 @@ export function UserDetailContent({
                             </span>
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "gap-1",
-                                perm.platform === "ANDROID"
-                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                  : "border-border bg-muted/50 text-muted-foreground",
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-1",
+                              perm.platform === "ANDROID"
+                                  ? themePills.positive
+                                  : themePills.neutral,
                               )}
                             >
                               {perm.platform === "ANDROID" ? (
@@ -1016,7 +1037,7 @@ export function UserDetailContent({
 
             <TabsContent value="meta" className="space-y-6">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-semibold">
                       Meta Permission
@@ -1085,8 +1106,8 @@ export function UserDetailContent({
                                 variant="outline"
                                 className={cn(
                                   perm.isActive
-                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                    : "border-border bg-muted/50 text-muted-foreground",
+                                    ? themePills.positive
+                                    : themePills.neutral,
                                 )}
                               >
                                 {perm.isActive ? "Active" : "Disabled"}
@@ -1103,7 +1124,7 @@ export function UserDetailContent({
 
             <TabsContent value="tiktok" className="space-y-6">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-semibold">
                       TikTok Permission
@@ -1172,8 +1193,8 @@ export function UserDetailContent({
                                 variant="outline"
                                 className={cn(
                                   perm.isActive
-                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                    : "border-border bg-muted/50 text-muted-foreground",
+                                    ? themePills.positive
+                                    : themePills.neutral,
                                 )}
                               >
                                 {perm.isActive ? "Active" : "Disabled"}
@@ -1216,13 +1237,13 @@ export function UserDetailContent({
         {/* Activity Tab */}
         <TabsContent value="activity" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base font-semibold">
                 Activity Log
               </CardTitle>
-              <div className="flex gap-2">
+              <div className="flex w-full sm:w-auto">
                 <Select defaultValue="all">
-                  <SelectTrigger className="w-36 h-8">
+                  <SelectTrigger className="h-8 w-full sm:w-36">
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1264,11 +1285,11 @@ export function UserDetailContent({
         {/* Sessions Tab */}
         <TabsContent value="sessions" className="mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-base font-semibold">
                 Active Sessions
               </CardTitle>
-              <Button variant="destructive" size="sm">
+              <Button variant="destructive" size="sm" className="w-full sm:w-auto">
                 Revoke All
               </Button>
             </CardHeader>
@@ -1277,9 +1298,9 @@ export function UserDetailContent({
                 {sessions.map((session, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                         {session.device.includes("iPhone") ? (
                           <Smartphone className="w-5 h-5 text-muted-foreground" />
@@ -1287,21 +1308,21 @@ export function UserDetailContent({
                           <Monitor className="w-5 h-5 text-muted-foreground" />
                         )}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium ">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium">
                             {session.device}
                           </p>
                           {session.isCurrent && (
                             <Badge
                               variant="outline"
-                              className="text-xs border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                              className={cn("text-xs", themePills.positive)}
                             >
                               Current session
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="break-words text-xs text-muted-foreground">
                           {session.ip} {" • "} {session.location}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -1313,7 +1334,7 @@ export function UserDetailContent({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-destructive hover:text-destructive/80 bg-transparent"
+                        className="w-full bg-transparent text-destructive hover:text-destructive/80 sm:w-auto"
                       >
                         Revoke
                       </Button>
@@ -1386,7 +1407,7 @@ export function UserDetailContent({
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {isSelfProfile ? "Leave Team" : "Remove from Team"}
@@ -1422,8 +1443,8 @@ export function UserDetailContent({
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={removingFromTeam}>
+          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+            <AlertDialogCancel className="w-full sm:w-auto" disabled={removingFromTeam}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
@@ -1432,7 +1453,7 @@ export function UserDetailContent({
                 void handleConfirmRemoveFromTeam();
               }}
               disabled={removingFromTeam}
-              className="bg-destructive hover:bg-destructive/90 focus:ring-destructive"
+              className="w-full bg-destructive hover:bg-destructive/90 focus:ring-destructive sm:w-auto"
             >
               {removingFromTeam && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

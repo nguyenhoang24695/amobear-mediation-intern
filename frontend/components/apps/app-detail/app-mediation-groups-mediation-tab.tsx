@@ -158,7 +158,7 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
 
   if (!appRowId) {
     return (
-      <div className="flex items-center justify-center h-40 text-sm text-slate-500">Đang tải app…</div>
+      <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">Đang tải app…</div>
     )
   }
 
@@ -166,26 +166,26 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         Rollup từ <code className="text-xs bg-slate-100 px-1 rounded">bronze.mediation_table</code>
-        <span className="text-slate-500">
+        <span className="text-muted-foreground">
           {" "}
           · chỉ tra cứu từ {BRONZE_MEDIATION_MIN_YMD} (UTC) trở đi
         </span>
         {payload?.startDate && payload?.endDate ? (
-          <span className="text-slate-500">
+          <span className="text-muted-foreground">
             {" "}
             · {payload.startDate} → {payload.endDate}
           </span>
         ) : null}
         {countryApplied.trim() ? (
-          <span className="text-slate-500">
+          <span className="text-muted-foreground">
             {" "}
             · Country: {iso3166Alpha2ToCountryName(countryApplied) || countryApplied} ({countryApplied.trim().toUpperCase()})
           </span>
         ) : null}
         {adSourceTitleApplied.trim() ? (
-          <span className="text-slate-500">
+          <span className="text-muted-foreground">
             {" "}
             · Ad source: {adSourceTitleApplied}
           </span>
@@ -355,13 +355,13 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
         </div>
       </Collapsible>
 
-      {error && <p className="text-sm text-red-600">{error.message || "Lỗi tải dữ liệu"}</p>}
+      {error && <p className="text-sm text-destructive">{error.message || "Lỗi tải dữ liệu"}</p>}
 
-      <Card className="border-slate-200 overflow-hidden flex flex-col">
+      <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr className="text-xs text-slate-500 font-medium">
+            <thead className="border-b border-border/70 bg-muted/40 backdrop-blur">
+              <tr className="text-xs font-medium text-muted-foreground">
                 <th className="w-10 px-2 py-3 text-left" aria-label="Mở bảng chi tiết Bronze" />
                 <th className="px-4 py-3 text-left min-w-[200px]">Mediation group</th>
                 <th className="px-4 py-3 text-left min-w-[120px]">Format</th>
@@ -375,16 +375,16 @@ export function AppMediationGroupsMediationTab({ appRowId }: AppMediationGroupsM
                 <th className="px-4 py-3 text-right w-24"> </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-border/70">
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-slate-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     Đang tải…
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-slate-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     Không có nhóm có dữ liệu trong khoảng lọc (hoặc chưa sync `mediation_table`).
                   </td>
                 </tr>
@@ -482,13 +482,13 @@ function MediationGroupRow({
   const hasBronzeMetrics = imp > 0 || req > 0 || rev > 0
   return (
     <>
-      <tr className={cn("hover:bg-slate-50 transition-colors", expanded && "bg-slate-50/80")}>
+      <tr className={cn("transition-colors hover:bg-muted/40", expanded && "bg-muted/30")}>
         <td className="w-10 px-2 py-3 align-middle">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className={cn("h-8 w-8 text-slate-600", expanded && "bg-slate-200 text-slate-900")}
+            className={cn("h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground", expanded && "bg-muted text-foreground")}
             aria-expanded={expanded}
             aria-label={
               expanded ? "Thu gọn bảng chi tiết Bronze" : "Mở bảng chi tiết Bronze (từng dòng hash_key + ngày)"
@@ -502,11 +502,11 @@ function MediationGroupRow({
           <div className="flex flex-col gap-0.5">
             <Link
               href={`/mediation/${encodeURIComponent(group.mediationGroupId)}`}
-              className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+              className="text-sm font-medium text-foreground hover:text-primary hover:underline"
             >
               {group.displayName}
             </Link>
-            <code className="text-xs text-slate-500 font-mono">{group.mediationGroupId}</code>
+            <code className="font-mono text-xs text-muted-foreground">{group.mediationGroupId}</code>
           </div>
         </td>
         <td className="px-4 py-3 align-middle">
@@ -521,16 +521,16 @@ function MediationGroupRow({
         <td className="px-4 py-3 text-right text-sm">
           {imp > 0 ? `$${group.ecpm.toFixed(2)}` : "—"}
         </td>
-        <td className="px-4 py-3 text-right text-sm text-slate-700">
+        <td className="px-4 py-3 text-right text-sm text-muted-foreground">
           {hasBronzeMetrics ? imp.toLocaleString() : "—"}
         </td>
-        <td className="px-4 py-3 text-right text-sm text-slate-700">
+        <td className="px-4 py-3 text-right text-sm text-muted-foreground">
           {hasBronzeMetrics ? req.toLocaleString() : "—"}
         </td>
-        <td className="px-4 py-3 text-right text-sm font-medium">
+        <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
           {hasBronzeMetrics ? `$${rev.toFixed(2)}` : "—"}
         </td>
-        <td className={cn("px-4 py-3 text-right text-sm", fillRate >= 90 ? "text-green-600" : "")}>
+        <td className={cn("px-4 py-3 text-right text-sm", fillRate >= 90 ? "text-emerald-600 dark:text-emerald-300" : "")}>
           {hasBronzeMetrics && req > 0 ? `${fillRate.toFixed(1)}%` : "—"}
         </td>
         <td className="px-4 py-3 text-right">
@@ -543,33 +543,33 @@ function MediationGroupRow({
         </td>
       </tr>
       {expanded ? (
-        <tr className="bg-slate-200/90">
-          <td colSpan={11} className="px-4 py-3 border-t border-slate-300">
-            <p className="text-xs font-medium text-slate-600 mb-2">
-              Chi tiết <code className="text-[11px] bg-slate-100 px-1 rounded">bronze.mediation_table</code>
+        <tr className="bg-muted/25">
+          <td colSpan={11} className="border-t border-border/70 px-4 py-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Chi tiết <code className="rounded bg-muted px-1 text-[11px]">bronze.mediation_table</code>
               {" · "}
               tất cả network (waterfall + bidding)
               {country ? ` · country=${country}` : null}
               {appVersion ? ` · app_version=${appVersion}` : null}
             </p>
             {!starRocksEnabled ? (
-              <p className="text-sm text-slate-600">StarRocks chưa bật — không tải được dòng chi tiết.</p>
+              <p className="text-sm text-muted-foreground">StarRocks chưa bật — không tải được dòng chi tiết.</p>
             ) : detailLoading ? (
-              <p className="text-sm text-slate-600 py-4 text-center">Đang tải các dòng đồng bộ gốc…</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">Đang tải các dòng đồng bộ gốc…</p>
             ) : detailError ? (
-              <p className="text-sm text-red-600">{detailError.message || "Lỗi tải chi tiết"}</p>
+              <p className="text-sm text-destructive">{detailError.message || "Lỗi tải chi tiết"}</p>
             ) : detailPayload && !detailPayload.starRocksEnabled ? (
-              <p className="text-sm text-slate-600">{detailPayload.message || "Không tải được chi tiết."}</p>
+              <p className="text-sm text-muted-foreground">{detailPayload.message || "Không tải được chi tiết."}</p>
             ) : detailRows.length === 0 ? (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-muted-foreground">
                 Không có dòng nào trong khoảng lọc (hoặc nhóm chưa có bản ghi Bronze).
               </p>
             ) : (
               <>
-                <div className="overflow-x-auto rounded border border-slate-300/80 bg-slate-100 max-h-[min(28rem,75vh)]">
+                <div className="max-h-[min(28rem,75vh)] overflow-x-auto rounded-lg border border-border/70 bg-background">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-200/90 sticky top-0 z-10">
-                      <tr className="text-slate-600 font-medium text-left">
+                    <thead className="bg-muted/25 sticky top-0 z-10">
+                      <tr className="text-left font-medium text-muted-foreground">
                         <th className="px-2 py-2 w-10 text-center whitespace-nowrap">STT</th>
                         <th className="px-2 py-2 whitespace-nowrap">Ngày (UTC)</th>
                         <th className="px-2 py-2">Country</th>
@@ -582,20 +582,20 @@ function MediationGroupRow({
                         <th className="px-2 py-2 text-right whitespace-nowrap">Revenue</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200/90">
+                    <tbody className="divide-y divide-border/70">
                       {detailRows.map((r: AppMediationBronzeAdUnitDetailRow, idx: number) => (
-                        <tr key={`${r.hashKey}_${r.date}`} className="bg-white/90 hover:bg-white">
-                          <td className="px-2 py-1.5 text-center text-slate-600 tabular-nums w-10">{idx + 1}</td>
-                          <td className="px-2 py-1.5 whitespace-nowrap text-slate-800">
+                        <tr key={`${r.hashKey}_${r.date}`} className="bg-card/50 hover:bg-muted/40">
+                          <td className="w-10 px-2 py-1.5 text-center tabular-nums text-muted-foreground">{idx + 1}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5 text-foreground">
                             {ymdFromDetailDate(r.date)}
                           </td>
                           <td className="px-2 py-1.5 text-center w-10">
                             <CountryFlagTooltipCell code={r.country} />
                           </td>
-                          <td className="px-2 py-1.5 text-slate-700 max-w-[120px] truncate" title={r.appVersionName}>
+                          <td className="max-w-[120px] truncate px-2 py-1.5 text-muted-foreground" title={r.appVersionName}>
                             {r.appVersionName || "—"}
                           </td>
-                          <td className="px-2 py-1.5 text-slate-700 max-w-[220px]">
+                          <td className="max-w-[220px] px-2 py-1.5 text-muted-foreground">
                             <span className="truncate block" title={r.adUnitId}>
                               {r.adUnitName || r.adUnitId || "—"}
                             </span>
@@ -603,21 +603,21 @@ function MediationGroupRow({
                               <code className="text-[10px] text-slate-500 font-mono truncate block">{r.adUnitId}</code>
                             ) : null}
                           </td>
-                          <td className="px-2 py-1.5 text-slate-700 max-w-[220px]">
+                          <td className="max-w-[220px] px-2 py-1.5 text-muted-foreground">
                             <span
                               className="truncate block"
                               title={[r.adSourceName, r.adSourceInstanceName].filter(Boolean).join(" · ") || ""}
                             >
                               {r.adSourceName || r.adSourceId || "—"}
                               {r.adSourceInstanceName ? (
-                                <span className="text-slate-500"> · {r.adSourceInstanceName}</span>
+                                <span className="text-muted-foreground"> · {r.adSourceInstanceName}</span>
                               ) : null}
                             </span>
                           </td>
-                          <td className="px-2 py-1.5 text-right tabular-nums">{r.impressions.toLocaleString()}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums">{r.adRequests.toLocaleString()}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums">{r.matchedRequests.toLocaleString()}</td>
-                          <td className="px-2 py-1.5 text-right tabular-nums font-medium">
+                          <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">{r.impressions.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">{r.adRequests.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground">{r.matchedRequests.toLocaleString()}</td>
+                          <td className="px-2 py-1.5 text-right tabular-nums text-muted-foreground font-medium">
                             ${r.estimatedEarnings.toFixed(4)}
                           </td>
                         </tr>
@@ -626,7 +626,7 @@ function MediationGroupRow({
                   </table>
                 </div>
                 {detailPayload?.truncated ? (
-                  <p className="text-xs text-amber-800 mt-2">
+                  <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
                     Chỉ hiển thị tối đa {detailPayload.limit} dòng. Thu hẹp khoảng ngày hoặc bộ lọc nếu cần xem thêm.
                   </p>
                 ) : null}

@@ -326,11 +326,11 @@ function parseMarkdown(content: string) {
 // Parse inline formatting
 function parseInline(text: string) {
   // Bold
-  text = text.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>')
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
   // Inline code
-  text = text.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-slate-100 text-slate-800 rounded text-sm font-mono">$1</code>')
+  text = text.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-muted text-foreground rounded text-sm font-mono">$1</code>')
   // Links
-  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-600 hover:underline">$1</a>')
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline">$1</a>')
   return text
 }
 
@@ -367,23 +367,23 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
   }, [elements])
 
   return (
-    <Card className="p-6 bg-white">
-      <div className="prose prose-slate max-w-none">
+    <Card className="border-border/70 bg-card p-4 shadow-sm sm:p-6">
+      <div className="prose prose-slate dark:prose-invert max-w-none">
         {elements.map((element) => {
           switch (element.type) {
             case "h1":
               return (
                 <div key={element.key} className="mb-6 mt-2">
-                  <h1 className="text-2xl font-bold text-slate-900 mb-3">{element.content}</h1>
+                  <h1 className="mb-3 text-2xl font-bold text-foreground">{element.content}</h1>
                   {toc.length > 0 ? (
-                    <div className="not-prose rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                      <div className="text-xs font-medium text-slate-600 mb-2">Mục lục</div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+                    <div className="not-prose rounded-lg border border-border bg-muted/40 px-3 py-3 sm:px-4">
+                      <div className="mb-2 text-xs font-medium text-muted-foreground">Mục lục</div>
+                      <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
                         {toc.map((item) => (
                           <a
                             key={item.id}
                             href={`#${item.id}`}
-                            className="text-sm text-indigo-700 hover:text-indigo-900 hover:underline truncate"
+                            className="truncate text-sm text-primary hover:underline"
                           >
                             {item.title}
                           </a>
@@ -398,7 +398,7 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
                 <h2
                   key={element.key}
                   id={slugifyHeading(element.content)}
-                  className="text-xl font-semibold text-indigo-700 border-b border-indigo-100 pb-2 mb-4 mt-8 first:mt-0 scroll-mt-20"
+                  className="mb-4 mt-8 scroll-mt-20 border-b border-border pb-2 text-xl font-semibold text-primary first:mt-0"
                 >
                   {element.content}
                 </h2>
@@ -408,7 +408,7 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
               return (
                 <h3
                   key={element.key}
-                  className="text-lg font-medium text-slate-800 mt-6 mb-3"
+                  className="mb-3 mt-6 text-lg font-medium text-foreground"
                 >
                   {element.content}
                 </h3>
@@ -418,7 +418,7 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
               return (
                 <p
                   key={element.key}
-                  className="text-slate-700 leading-relaxed mb-4"
+                  className="mb-4 leading-relaxed text-foreground"
                   dangerouslySetInnerHTML={{ __html: parseInline(element.content) }}
                 />
               )
@@ -426,11 +426,11 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
             case "li-ordered":
               return (
                 <div key={element.key} className="flex gap-3 mb-2 ml-4">
-                  <span className="text-indigo-500 font-medium">
+                  <span className="font-medium text-primary">
                     {element.key}.
                   </span>
                   <p
-                    className="text-slate-700 flex-1"
+                    className="flex-1 text-foreground"
                     dangerouslySetInnerHTML={{ __html: parseInline(element.content) }}
                   />
                 </div>
@@ -439,11 +439,11 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
             case "li-unordered":
               return (
                 <div key={element.key} className="flex gap-3 mb-2 ml-4">
-                  <span className="text-indigo-400 mt-2">
+                  <span className="mt-2 text-primary/70">
                     <span className="block w-1.5 h-1.5 rounded-full bg-current" />
                   </span>
                   <p
-                    className="text-slate-700 flex-1"
+                    className="flex-1 text-foreground"
                     dangerouslySetInnerHTML={{ __html: parseInline(element.content) }}
                   />
                 </div>
@@ -454,26 +454,26 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
               if (!tableData) return null
               return (
                 <div key={element.key} className="my-4 overflow-x-auto">
-                  <table className="min-w-full border border-slate-200 rounded-lg overflow-hidden">
-                    <thead className="bg-slate-50">
+                  <table className="min-w-full overflow-hidden rounded-lg border border-border">
+                    <thead className="bg-muted/50">
                       <tr>
                         {tableData.headers.map((header, i) => (
                           <th
                             key={i}
-                            className="px-4 py-2.5 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200"
+                            className="border-b border-border px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                           >
                             {header}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-border">
                       {tableData.dataRows.map((row, rowIndex) => (
                         <tr
                           key={rowIndex}
                           className={cn(
-                            "hover:bg-slate-50 transition-colors",
-                            rowIndex % 2 === 1 && "bg-slate-25"
+                            "transition-colors hover:bg-muted/40",
+                            rowIndex % 2 === 1 && "bg-muted/20"
                           )}
                         >
                           {row.map((cell, cellIndex) => {
@@ -485,9 +485,9 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
                                 key={cellIndex}
                                 className={cn(
                                   "px-4 py-2.5 text-sm",
-                                  cellIndex === 0 ? "font-medium text-slate-800" : "text-slate-600",
-                                  isPositive && "text-emerald-600 font-mono font-medium",
-                                  isNegative && "text-red-600 font-mono font-medium"
+                                  cellIndex === 0 ? "font-medium text-foreground" : "text-muted-foreground",
+                                  isPositive && "font-mono font-medium text-emerald-600 dark:text-emerald-400",
+                                  isNegative && "font-mono font-medium text-red-600 dark:text-red-400"
                                 )}
                               >
                                 {cell}
@@ -513,13 +513,13 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
                 }))
                 return (
                   <div key={element.key} className="my-4">
-                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
                       {parsed.title ? (
-                        <div className="text-sm font-semibold text-slate-800 mb-3">
+                        <div className="mb-3 text-sm font-semibold text-foreground">
                           {parsed.title}
                         </div>
                       ) : null}
-                      <div className="w-full h-[320px]">
+                      <div className="h-[240px] w-full sm:h-[280px] lg:h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
                           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
                             <PolarGrid strokeDasharray="3 3" />
@@ -555,11 +555,11 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
                 const colors = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4", "#a855f7", "#64748b"]
                 return (
                   <div key={element.key} className="my-4">
-                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
                       {pie.title ? (
-                        <div className="text-sm font-semibold text-slate-800 mb-3">{pie.title}</div>
+                        <div className="mb-3 text-sm font-semibold text-foreground">{pie.title}</div>
                       ) : null}
-                      <div className="w-full h-[320px]">
+                      <div className="h-[240px] w-full sm:h-[280px] lg:h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -590,11 +590,11 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
                 const palette = ["#6366f1", "#f59e0b", "#22c55e", "#ef4444", "#06b6d4", "#a855f7", "#64748b"]
                 return (
                   <div key={element.key} className="my-4">
-                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                    <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
                       {xy.title ? (
-                        <div className="text-sm font-semibold text-slate-800 mb-3">{xy.title}</div>
+                        <div className="mb-3 text-sm font-semibold text-foreground">{xy.title}</div>
                       ) : null}
-                      <div className="w-full h-[320px]">
+                      <div className="h-[240px] w-full sm:h-[280px] lg:h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={xy.data}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -638,7 +638,7 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
                         </ResponsiveContainer>
                       </div>
                       {xy.xLabel ? (
-                        <div className="text-xs text-slate-500 mt-2">X: {xy.xLabel}</div>
+                        <div className="mt-2 text-xs text-muted-foreground">X: {xy.xLabel}</div>
                       ) : null}
                     </div>
                   </div>
@@ -657,9 +657,9 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
               return (
                 <pre
                   key={element.key}
-                  className="my-4 p-4 bg-slate-900 rounded-lg overflow-x-auto"
+                  className="my-4 overflow-x-auto rounded-lg bg-muted p-3 sm:p-4"
                 >
-                  <code className="text-sm font-mono text-slate-300">
+                  <code className="text-sm font-mono text-foreground">
                     {element.content}
                   </code>
                 </pre>
@@ -667,7 +667,7 @@ export function InsightContentRendered({ content }: InsightContentRenderedProps)
 
             case "hr":
               return (
-                <hr key={element.key} className="my-8 border-slate-200" />
+                <hr key={element.key} className="my-8 border-border" />
               )
 
             case "space":

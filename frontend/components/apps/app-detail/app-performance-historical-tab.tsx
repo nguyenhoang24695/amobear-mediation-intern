@@ -801,13 +801,13 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Revenue vs UA Cost</h2>
-          <p className="text-sm text-slate-500">{rangeLabel}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Timezone for query: {timeZoneLabel}</p>
+          <h2 className="text-lg font-semibold text-foreground">Revenue vs UA Cost</h2>
+          <p className="text-sm text-muted-foreground">{rangeLabel}</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Timezone for query: {timeZoneLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={preset} onValueChange={(v) => handlePresetChange(v as PresetKey)}>
-            <SelectTrigger className="w-[160px] h-9 text-sm bg-white">
+            <SelectTrigger className="h-9 w-[160px] text-sm bg-background">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -827,7 +827,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
               setExpandedDates(new Set())
             }}
           >
-            <SelectTrigger className="w-[120px] h-9 text-sm bg-white" title="Offset UTC (vd +7). Ngày trong khoảng hiểu theo offset này khi query StarRocks">
+            <SelectTrigger className="h-9 w-[120px] text-sm bg-background" title="Offset UTC (vd +7). Ngày trong khoảng hiểu theo offset này khi query StarRocks">
               <SelectValue placeholder="Timezone" />
             </SelectTrigger>
             <SelectContent>
@@ -872,56 +872,56 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
       </div>
 
       {loading && perfResponse != null ? (
-        <div className="text-sm text-slate-500">Refreshing…</div>
+        <div className="text-sm text-muted-foreground">Refreshing…</div>
       ) : null}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200">
+        <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-slate-500 mb-1">Total Revenue</p>
-                <p className="text-xl font-semibold text-slate-900">{fmtUsd(summary.totalRevenue)}</p>
-                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+                <p className="mb-1 text-xs text-muted-foreground">Total Revenue</p>
+                <p className="text-xl font-semibold text-foreground">{fmtUsd(summary.totalRevenue)}</p>
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border/70 pt-3">
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">IAA Revenue</p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-700">{fmtUsd(summary.iaaRevenue)}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">IAA Revenue</p>
+                    <p className="mt-0.5 text-sm font-semibold text-foreground">{fmtUsd(summary.iaaRevenue)}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">IAP Revenue</p>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-700">{fmtUsd(summary.iapRevenue)}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">IAP Revenue</p>
+                    <p className="mt-0.5 text-sm font-semibold text-foreground">{fmtUsd(summary.iapRevenue)}</p>
                   </div>
                 </div>
               </div>
-              <div className="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                 <DollarSign className="w-4 h-4" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Total UA Cost</p>
-                <p className="text-xl font-semibold text-slate-900">{fmtUsd(summary.totalCost)}</p>
+                <p className="mb-1 text-xs text-muted-foreground">Total UA Cost</p>
+                <p className="text-xl font-semibold text-foreground">{fmtUsd(summary.totalCost)}</p>
               </div>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-50 text-red-600">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300">
                 <TrendingDown className="w-4 h-4" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Net (Revenue - Cost)</p>
+                <p className="mb-1 text-xs text-muted-foreground">Net (Revenue - Cost)</p>
                 <p
                   className={`text-xl font-semibold ${
-                    summary.net === null ? "text-slate-900" : summary.net >= 0 ? "text-green-600" : "text-red-600"
+                    summary.net === null ? "text-foreground" : summary.net >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
                   }`}
                 >
                   {fmtUsd(summary.net, true)}
@@ -930,10 +930,10 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
               <div
                 className={`w-9 h-9 rounded-lg flex items-center justify-center ${
                   summary.net === null
-                    ? "bg-slate-100 text-slate-500"
+                    ? "bg-muted text-muted-foreground"
                     : summary.net >= 0
-                      ? "bg-green-50 text-green-600"
-                      : "bg-red-50 text-red-600"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                      : "bg-rose-500/10 text-rose-600 dark:text-rose-300"
                 }`}
               >
                 {summary.net === null ? (
@@ -950,10 +950,10 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                 variant="outline"
                 className={`text-xs ${
                   summary.margin === null
-                    ? "bg-slate-50 text-slate-600 border-slate-200"
+                    ? "bg-muted/30 text-muted-foreground border-border/70"
                     : summary.margin >= 0
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : "bg-red-50 text-red-700 border-red-200"
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-green-200"
+                      : "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-red-200"
                 }`}
               >
                 {summary.margin === null ? "N/A" : `${fmtMarginPct(summary.margin)} margin`}
@@ -962,17 +962,17 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
+        <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Data coverage</p>
-                <p className="text-xl font-semibold text-slate-900">
+                <p className="mb-1 text-xs text-muted-foreground">Data coverage</p>
+                <p className="text-xl font-semibold text-foreground">
                   {dailyData.length === 0 ? "N/A" : `${summary.daysWithData}/${dailyData.length}`}
                 </p>
-                <p className="text-xs text-slate-400">days with data · {summary.buckets} hourly buckets</p>
+                <p className="text-xs text-muted-foreground/70">days with data · {summary.buckets} hourly buckets</p>
               </div>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
                 <Clock className="w-4 h-4" />
               </div>
             </div>
@@ -980,10 +980,10 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
         </Card>
       </div>
 
-      <Card className="border-slate-200">
+      <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold text-slate-900">Daily Breakdown</CardTitle>
-          <CardDescription className="text-sm text-slate-500">
+          <CardTitle className="text-base font-semibold text-foreground">Daily Breakdown</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground">
             Revenue (AppLovin / AdMob / Qonversion), UA cost (XMP) và Net
             {chartBreakdownByHour ? " theo giờ" : " theo ngày"} — lọc nguồn ở sidebar
             {canToggleBreakdownLegend ? (
@@ -998,7 +998,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 min-w-0 h-80 lg:h-96">
               {activeChartData.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500 px-4 text-center">
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/70 bg-muted/30 text-sm text-muted-foreground px-4 text-center">
                   {chartBreakdownByHour ? "No hourly buckets in range" : "No days in range"}
                 </div>
               ) : (
@@ -1039,19 +1039,19 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                           const net = row?.net ?? null
                           const tooltipTitle = row?.tooltipLabel ?? row?.label ?? ""
                           return (
-                            <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 min-w-[160px]">
-                              <p className="text-sm font-medium text-slate-900 mb-2">{tooltipTitle}</p>
+                            <div className="min-w-[160px] rounded-lg border border-border/70 bg-popover/95 p-3 text-popover-foreground shadow-lg backdrop-blur">
+                              <p className="text-sm font-medium text-foreground mb-2">{tooltipTitle}</p>
                               <div className="space-y-1">
                                 {!(canToggleBreakdownLegend && isChartSeriesHidden("revenue")) ? (
                                   <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-600">Revenue:</span>
-                                    <span className="font-medium text-green-600">{fmtUsd(revenue)}</span>
+                                    <span className="text-muted-foreground">Revenue:</span>
+                                    <span className="font-medium text-emerald-600 dark:text-emerald-300">{fmtUsd(revenue)}</span>
                                   </div>
                                 ) : null}
                                 {!(canToggleBreakdownLegend && isChartSeriesHidden("cost")) ? (
                                   <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-600">UA Cost:</span>
-                                    <span className="font-medium text-red-500">{fmtUsd(cost)}</span>
+                                    <span className="text-muted-foreground">UA Cost:</span>
+                                    <span className="font-medium text-rose-600 dark:text-rose-300">{fmtUsd(cost)}</span>
                                   </div>
                                 ) : null}
                                 {!(canToggleBreakdownLegend && isChartSeriesHidden("net")) ? (
@@ -1059,15 +1059,15 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                                     className={
                                       !(canToggleBreakdownLegend && isChartSeriesHidden("revenue")) ||
                                       !(canToggleBreakdownLegend && isChartSeriesHidden("cost"))
-                                        ? "border-t border-slate-100 pt-1 mt-1"
+                                        ? "border-t border-border/70 pt-1 mt-1"
                                         : ""
                                     }
                                   >
                                     <div className="flex items-center justify-between text-sm">
-                                      <span className="text-slate-600">Net:</span>
+                                      <span className="text-muted-foreground">Net:</span>
                                       <span
                                         className={`font-semibold ${
-                                          net === null ? "text-slate-700" : net >= 0 ? "text-green-600" : "text-red-600"
+                                          net === null ? "text-muted-foreground" : net >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
                                         }`}
                                       >
                                         {fmtUsd(net, true)}
@@ -1096,7 +1096,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                         return (
                           <span
                             className={`text-sm capitalize select-none ${
-                              hidden ? "text-slate-400 line-through" : "text-slate-600"
+                              hidden ? "text-muted-foreground/70 line-through" : "text-muted-foreground"
                             }`}
                           >
                             {value}
@@ -1143,9 +1143,9 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
               )}
             </div>
 
-            <aside className="lg:w-56 shrink-0 border-l border-slate-200 pl-4 flex flex-col justify-center gap-5 lg:min-h-80">
+            <aside className="lg:w-56 shrink-0 border-l border-border/70 pl-4 flex flex-col justify-center gap-5 lg:min-h-80">
                 <div className="space-y-3">
-                  <p className="text-xs font-medium text-slate-700">Chart style</p>
+                  <p className="text-xs font-medium text-muted-foreground">Chart style</p>
                   {DAILY_BREAKDOWN_METRICS.map((metric) => (
                     <div key={metric.key} className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
@@ -1154,7 +1154,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                           style={{ backgroundColor: metric.color }}
                           aria-hidden
                         />
-                        <span className="truncate text-xs text-slate-600">{metric.label}</span>
+                        <span className="truncate text-xs text-muted-foreground">{metric.label}</span>
                       </div>
                       <ToggleGroup
                         type="single"
@@ -1163,19 +1163,19 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                         onValueChange={(v) => {
                           if (v === "line" || v === "bar") setMetricVisualType(metric.key, v)
                         }}
-                        className="h-7 shrink-0 rounded-md bg-slate-100 p-0.5 shadow-none"
+                        className="h-7 shrink-0 rounded-md bg-muted p-0.5 shadow-none"
                       >
                         <ToggleGroupItem
                           value="line"
                           aria-label={`${metric.label} line chart`}
-                          className="h-6 min-w-[2.75rem] rounded-[4px] border-0 px-2 text-[11px] font-medium shadow-none data-[state=off]:bg-transparent data-[state=off]:text-slate-500 data-[state=on]:bg-white data-[state=on]:font-semibold data-[state=on]:text-slate-900 data-[state=on]:shadow-sm"
+                          className="h-6 min-w-[2.75rem] rounded-[4px] border-0 px-2 text-[11px] font-medium shadow-none data-[state=off]:bg-transparent data-[state=off]:text-muted-foreground data-[state=on]:bg-background data-[state=on]:font-semibold data-[state=on]:text-foreground data-[state=on]:shadow-sm"
                         >
                           Line
                         </ToggleGroupItem>
                         <ToggleGroupItem
                           value="bar"
                           aria-label={`${metric.label} bar chart`}
-                          className="h-6 min-w-[2.75rem] rounded-[4px] border-0 px-2 text-[11px] font-medium shadow-none data-[state=off]:bg-transparent data-[state=off]:text-slate-500 data-[state=on]:bg-white data-[state=on]:font-semibold data-[state=on]:text-slate-900 data-[state=on]:shadow-sm"
+                          className="h-6 min-w-[2.75rem] rounded-[4px] border-0 px-2 text-[11px] font-medium shadow-none data-[state=off]:bg-transparent data-[state=off]:text-muted-foreground data-[state=on]:bg-background data-[state=on]:font-semibold data-[state=on]:text-foreground data-[state=on]:shadow-sm"
                         >
                           Bar
                         </ToggleGroupItem>
@@ -1184,12 +1184,12 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                   ))}
                 </div>
 
-                <div className="border-t border-slate-100 pt-4 space-y-2.5">
-                  <p className="text-xs font-medium text-slate-700">Source filter</p>
+                <div className="border-t border-border/70 pt-4 space-y-2.5">
+                  <p className="text-xs font-medium text-muted-foreground">Source filter</p>
                   {PERFORMANCE_BREAKDOWN_SOURCES.map((source) => (
                     <label
                       key={source.key}
-                      className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer"
+                      className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer"
                     >
                       <Checkbox
                         checked={selectedBreakdownSources.has(source.key)}
@@ -1201,11 +1201,11 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                   ))}
                 </div>
 
-                <div className="border-t border-slate-100 pt-4">
-                  <p className="text-xs font-medium text-slate-700 mb-2.5">Breakdown</p>
+                <div className="border-t border-border/70 pt-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2.5">Breakdown</p>
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`text-xs shrink-0 ${chartBreakdownGranularity === "day" ? "font-medium text-slate-900" : "text-slate-500"}`}
+                      className={`text-xs shrink-0 ${chartBreakdownGranularity === "day" ? "font-medium text-foreground" : "text-muted-foreground"}`}
                     >
                       By day
                     </span>
@@ -1217,7 +1217,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                       aria-label="Toggle breakdown by hour"
                     />
                     <span
-                      className={`text-xs shrink-0 ${chartBreakdownGranularity === "hour" ? "font-medium text-slate-900" : "text-slate-500"}`}
+                      className={`text-xs shrink-0 ${chartBreakdownGranularity === "hour" ? "font-medium text-foreground" : "text-muted-foreground"}`}
                     >
                       By hour
                     </span>
@@ -1229,19 +1229,19 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
       </Card>
 
       {showTable && (
-        <Card className="border-slate-200">
+        <Card className="overflow-hidden border-border/70 bg-card/90 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <CardTitle className="text-base font-semibold text-slate-900">Daily Data Table</CardTitle>
-                <CardDescription className="text-sm text-slate-500">
+                <CardTitle className="text-base font-semibold text-foreground">Daily Data Table</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground">
                   Click a row to expand hourly breakdown. Icon rerun (↻) cạnh Revenue / UA Cost để xếp hàng Hangfire chạy lại
                   dữ liệu cho đúng ngày đó — hover để xem chi tiết.
                 </CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/70" />
                   <Input
                     placeholder="Search date..."
                     className="pl-8 h-8 w-40 text-sm"
@@ -1275,7 +1275,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 text-xs text-slate-500"
+                    className="h-8 text-xs text-muted-foreground"
                     onClick={() => {
                       setTableFilterDate(undefined)
                       setTableSearchDate("")
@@ -1289,15 +1289,15 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="overflow-hidden rounded-lg border border-border/70">
               <Table>
-                <TableHeader className="bg-slate-50">
+                <TableHeader className="bg-muted/40">
                   <TableRow>
                     <TableHead className="w-10" />
                     <TableHead className="w-40">
                       <button
                         type="button"
-                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-slate-900"
+                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-foreground"
                         onClick={() => toggleTableSort("date")}
                       >
                         Date
@@ -1307,7 +1307,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                     <TableHead className="text-right">
                       <button
                         type="button"
-                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-slate-900 ml-auto"
+                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-foreground ml-auto"
                         onClick={() => toggleTableSort("revenue")}
                       >
                         Revenue
@@ -1317,7 +1317,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                     <TableHead className="text-right">
                       <button
                         type="button"
-                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-slate-900 ml-auto"
+                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-foreground ml-auto"
                         onClick={() => toggleTableSort("cost")}
                       >
                         UA Cost
@@ -1327,7 +1327,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                     <TableHead className="text-right">
                       <button
                         type="button"
-                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-slate-900 ml-auto"
+                        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide hover:text-foreground ml-auto"
                         onClick={() => toggleTableSort("net")}
                       >
                         Net
@@ -1342,7 +1342,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                 <TableBody>
                   {paginatedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                         No data matches your filter
                       </TableCell>
                     </TableRow>
@@ -1356,27 +1356,27 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                       return (
                         <Fragment key={row.date}>
                           <TableRow
-                            className="hover:bg-slate-50 cursor-pointer"
+                            className="hover:bg-muted/40 cursor-pointer"
                             onClick={() => toggleExpandDate(row.date)}
                           >
                             <TableCell className="w-10">
                               {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )}
                             </TableCell>
-                            <TableCell className="font-medium text-slate-900">{row.dateLabel}</TableCell>
+                            <TableCell className="font-medium text-foreground">{row.dateLabel}</TableCell>
                             <TableCell className="text-right p-2 align-middle">
                               <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                <span className="font-medium text-green-600 tabular-nums">{fmtUsd(row.revenue)}</span>
+                                <span className="font-medium text-emerald-600 dark:text-emerald-300 tabular-nums">{fmtUsd(row.revenue)}</span>
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="icon"
                                   title="Chạy lại revenue (AdMob + silver/gold cho ngày này)"
                                   aria-label="Chạy lại revenue cho ngày này"
-                                  className="h-7 w-7 shrink-0 text-green-700 hover:text-green-800 hover:bg-green-50"
+                                  className="h-7 w-7 shrink-0 text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-800 dark:text-emerald-300"
                                   disabled={isRowFuture || revBusy}
                                   onClick={(e) => {
                                     e.stopPropagation()
@@ -1393,7 +1393,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                             </TableCell>
                             <TableCell className="text-right p-2 align-middle">
                               <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                <span className="font-medium text-red-500 tabular-nums">{fmtUsd(row.cost)}</span>
+                                <span className="font-medium text-rose-600 dark:text-rose-300 tabular-nums">{fmtUsd(row.cost)}</span>
                                 {row.uaCostDailyVsHourlyMismatch ? (
                                   <span
                                     className="inline-flex"
@@ -1411,7 +1411,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                                   size="icon"
                                   title="Chạy lại UA cost (XMP cả ngày + gold hourly)"
                                   aria-label="Chạy lại UA cost cho ngày này"
-                                  className="h-7 w-7 shrink-0 text-red-700 hover:text-red-800 hover:bg-red-50"
+                                  className="h-7 w-7 shrink-0 text-rose-700 hover:bg-rose-500/10 hover:text-rose-800 dark:text-rose-300"
                                   disabled={isRowFuture || costBusy}
                                   onClick={(e) => {
                                     e.stopPropagation()
@@ -1428,26 +1428,26 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                             </TableCell>
                             <TableCell
                               className={`text-right font-semibold ${
-                                row.net === null ? "text-slate-600" : row.net >= 0 ? "text-green-600" : "text-red-600"
+                                row.net === null ? "text-muted-foreground" : row.net >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
                               }`}
                             >
                               {fmtUsd(row.net, true)}
                             </TableCell>
                             <TableCell className="text-right">
                               {row.hasData ? (
-                                <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600">
+                                <Badge variant="outline" className="text-xs bg-muted/30 text-muted-foreground">
                                   {row.hourlyData.length}h
                                 </Badge>
                               ) : (
-                                <span className="text-sm text-slate-500">N/A</span>
+                                <span className="text-sm text-muted-foreground">N/A</span>
                               )}
                             </TableCell>
                           </TableRow>
                           {isExpanded ? (
-                            <TableRow className="bg-slate-50/50">
+                            <TableRow className="bg-muted/30">
                               <TableCell colSpan={6} className="p-0">
-                                <div className="px-4 py-3 ml-10 border-l-2 border-blue-200">
-                                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                                <div className="px-4 py-3 ml-10 border-l-2 border-primary/20">
+                                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Hourly breakdown for {row.dateLabel}
                                   </p>
                                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 max-h-56 overflow-y-auto pr-1">
@@ -1455,17 +1455,17 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                                       ? row.hourlyData.map((h) => (
                                           <div
                                             key={`${row.date}-${h.hour}`}
-                                            className="bg-white border border-slate-200 rounded-md p-2 text-xs"
+                                            className="rounded-md border border-border/70 bg-background p-2 text-xs"
                                           >
-                                            <p className="font-medium text-slate-700 mb-1">{h.hour}</p>
+                                            <p className="mb-1 font-medium text-foreground">{h.hour}</p>
                                             <div className="flex items-center justify-between gap-1">
-                                              <span className="text-green-600">{fmtUsd(h.revenue)}</span>
-                                              <span className="text-slate-300">/</span>
-                                              <span className="text-red-500">{fmtUsd(h.cost)}</span>
+                                              <span className="text-emerald-600 dark:text-emerald-300">{fmtUsd(h.revenue)}</span>
+                                              <span className="text-muted-foreground/40">/</span>
+                                              <span className="text-rose-600 dark:text-rose-300">{fmtUsd(h.cost)}</span>
                                             </div>
                                             <p
                                               className={`text-[10px] mt-0.5 ${
-                                                h.net === null ? "text-slate-500" : h.net >= 0 ? "text-green-600" : "text-red-600"
+                                                h.net === null ? "text-muted-foreground" : h.net >= 0 ? "text-emerald-600 dark:text-emerald-300" : "text-rose-600 dark:text-rose-300"
                                               }`}
                                             >
                                               Net: {fmtUsd(h.net, true)}
@@ -1477,15 +1477,15 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
                                           return (
                                             <div
                                               key={`${row.date}-${hour}-na`}
-                                              className="bg-white border border-slate-200 rounded-md p-2 text-xs"
+                                              className="rounded-md border border-border/70 bg-background p-2 text-xs"
                                             >
-                                              <p className="font-medium text-slate-700 mb-1">{hour}</p>
+                                              <p className="mb-1 font-medium text-foreground">{hour}</p>
                                               <div className="flex items-center justify-between gap-1">
-                                                <span className="text-green-600">N/A</span>
-                                                <span className="text-slate-300">/</span>
-                                                <span className="text-red-500">N/A</span>
+                                                <span className="text-emerald-600 dark:text-emerald-300">N/A</span>
+                                                <span className="text-muted-foreground/40">/</span>
+                                                <span className="text-rose-600 dark:text-rose-300">N/A</span>
                                               </div>
-                                              <p className="text-[10px] mt-0.5 text-slate-500">Net: N/A</p>
+                                              <p className="text-[10px] mt-0.5 text-muted-foreground">Net: N/A</p>
                                             </div>
                                           )
                                         })}
@@ -1503,7 +1503,7 @@ export function AppPerformanceHistoricalTab({ appId, publisherTimezoneOffsetHour
             </div>
 
             {filteredTableData.length > 0 ? (
-              <div className="mt-4 rounded-lg border border-slate-200 overflow-hidden">
+              <div className="mt-4 overflow-hidden rounded-lg border border-border/70">
                 <DataPagination
                   currentPage={currentPage}
                   totalPages={totalPages}

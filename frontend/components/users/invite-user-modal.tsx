@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { teamMembersApi, structureApi } from "@/lib/api/services"
-import { useApi } from "@/hooks/use-api"
+import { useState } from "react";
+import { teamMembersApi, structureApi } from "@/lib/api/services";
+import { useApi } from "@/hooks/use-api";
 import {
   Dialog,
   DialogContent,
@@ -12,124 +12,161 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { X, Loader2, CheckCircle2, ChevronDown, Check, ChevronsUpDown, AlertCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { RoleSelector } from "./role-selector"
-import { AppPermissionsSelector } from "./app-permissions-selector"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  X,
+  Loader2,
+  CheckCircle2,
+  ChevronDown,
+  Check,
+  ChevronsUpDown,
+  AlertCircle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { RoleSelector } from "./role-selector";
+import { AppPermissionsSelector } from "./app-permissions-selector";
 
 interface InviteUserModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-type ModalState = "form" | "loading" | "success" | "partial-error"
+type ModalState = "form" | "loading" | "success" | "partial-error";
 
 export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
-  const [state, setState] = useState<ModalState>("form")
-  const [emailInput, setEmailInput] = useState("")
-  const [emails, setEmails] = useState<string[]>([])
-  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer")
-  const [giveAllApps, setGiveAllApps] = useState(false)
-  const [selectedApps, setSelectedApps] = useState<{ id: string; permission: string }[]>([])
-  const [message, setMessage] = useState("")
-  const [showPreview, setShowPreview] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
-  const [inviteResults, setInviteResults] = useState<Array<{ email: string; success: boolean; error?: string }>>([])
+  const [state, setState] = useState<ModalState>("form");
+  const [emailInput, setEmailInput] = useState("");
+  const [emails, setEmails] = useState<string[]>([]);
+  const [role, setRole] = useState<"admin" | "editor" | "viewer">("viewer");
+  const [giveAllApps, setGiveAllApps] = useState(false);
+  const [selectedApps, setSelectedApps] = useState<
+    { id: string; permission: string }[]
+  >([]);
+  const [message, setMessage] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [inviteResults, setInviteResults] = useState<
+    Array<{ email: string; success: boolean; error?: string }>
+  >([]);
 
   // Fetch apps from API
   const { data: appsResponse, loading: appsLoading } = useApi(
     () => structureApi.getApps(),
-    { enabled: open, cacheKey: 'apps_list_for_invite' }
-  )
+    { enabled: open, cacheKey: "apps_list_for_invite" },
+  );
 
   // Map API apps to AppPermissionsSelector format
-  const apps = appsResponse?.apps?.map((app) => ({
-    id: app.appId, // Use appId (string) as id
-    name: app.displayName || app.name,
-    icon: app.iconUri,
-    platform: app.platform,
-    appStoreId: app.appStoreId,
-  })) || []
+  const apps =
+    appsResponse?.apps?.map((app) => ({
+      id: app.appId, // Use appId (string) as id
+      name: app.displayName || app.name,
+      icon: app.iconUri,
+      platform: app.platform,
+      appStoreId: app.appStoreId,
+    })) || [];
 
   const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault()
-      addEmail()
+      e.preventDefault();
+      addEmail();
     }
-  }
+  };
 
   const addEmail = () => {
-    const email = emailInput.trim().replace(",", "")
-    if (!email) return
+    const email = emailInput.trim().replace(",", "");
+    if (!email) return;
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setEmailError("Please enter a valid email address")
-      return
+      setEmailError("Please enter a valid email address");
+      return;
     }
 
     if (emails.includes(email)) {
-      setEmailError("This email has already been added")
-      return
+      setEmailError("This email has already been added");
+      return;
     }
 
     // Check if already a member
     if (email === "existing@company.com") {
-      setEmailError(`${email} is already a member of this organization`)
-      return
+      setEmailError(`${email} is already a member of this organization`);
+      return;
     }
 
-    setEmails([...emails, email])
-    setEmailInput("")
-    setEmailError(null)
-  }
+    setEmails([...emails, email]);
+    setEmailInput("");
+    setEmailError(null);
+  };
 
   const removeEmail = (email: string) => {
-    setEmails(emails.filter((e) => e !== email))
-  }
+    setEmails(emails.filter((e) => e !== email));
+  };
 
   const toggleApp = (appId: string) => {
     setSelectedApps((prev) => {
-      const exists = prev.find((a) => a.id === appId)
+      const exists = prev.find((a) => a.id === appId);
       if (exists) {
-        return prev.filter((a) => a.id !== appId)
+        return prev.filter((a) => a.id !== appId);
       }
-      return [...prev, { id: appId, permission: "view" }]
-    })
-  }
+      return [...prev, { id: appId, permission: "view" }];
+    });
+  };
 
   const updateAppPermission = (appId: string, permission: string) => {
-    setSelectedApps((prev) => prev.map((a) => (a.id === appId ? { ...a, permission } : a)))
-  }
+    setSelectedApps((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, permission } : a)),
+    );
+  };
 
   const removeApp = (appId: string) => {
-    setSelectedApps((prev) => prev.filter((a) => a.id !== appId))
-  }
+    setSelectedApps((prev) => prev.filter((a) => a.id !== appId));
+  };
 
   const handleSubmit = async () => {
-    if (emails.length === 0) return
+    if (emails.length === 0) return;
 
-    setState("loading")
+    setState("loading");
 
     // Prepare request data
     const appPermissions = giveAllApps
       ? undefined // If giveAllApps is true, don't send appPermissions (backend will handle it)
       : selectedApps.length > 0
-        ? selectedApps.map(app => ({ AppId: app.id, Level: app.permission }))
-        : undefined
+        ? selectedApps.map((app) => ({ AppId: app.id, Level: app.permission }))
+        : undefined;
 
     // Send invitation for each email
-    const results: Array<{ email: string; success: boolean; error?: string }> = []
+    const results: Array<{ email: string; success: boolean; error?: string }> =
+      [];
 
     for (const email of emails) {
       try {
@@ -138,67 +175,71 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
           role,
           appPermissions,
           message: message || undefined,
-        })
+        });
 
         if (response.success) {
-          results.push({ email, success: true })
+          results.push({ email, success: true });
         } else {
           results.push({
             email,
             success: false,
-            error: (response as any).error?.message || "Failed to send invitation"
-          })
+            error:
+              (response as any).error?.message || "Failed to send invitation",
+          });
         }
       } catch (error: any) {
-        const errorMessage = error?.response?.data?.error?.message || error?.message || "Failed to send invitation"
-        results.push({ email, success: false, error: errorMessage })
+        const errorMessage =
+          error?.response?.data?.error?.message ||
+          error?.message ||
+          "Failed to send invitation";
+        results.push({ email, success: false, error: errorMessage });
       }
     }
 
     // Store results for display
-    setInviteResults(results)
+    setInviteResults(results);
 
     // Determine final state
-    const successCount = results.filter(r => r.success).length
-    const failCount = results.filter(r => !r.success).length
+    const successCount = results.filter((r) => r.success).length;
+    const failCount = results.filter((r) => !r.success).length;
 
     if (failCount === 0) {
       // All succeeded
-      setState("success")
+      setState("success");
     } else if (successCount > 0) {
       // Partial success
-      setState("partial-error")
+      setState("partial-error");
     } else {
       // All failed - show error
-      setState("partial-error")
+      setState("partial-error");
     }
-  }
+  };
 
   const handleInviteMore = () => {
-    setState("form")
-    setEmails([])
-    setEmailInput("")
-    setRole("viewer")
-    setGiveAllApps(false)
-    setSelectedApps([])
-    setMessage("")
-    setInviteResults([])
-  }
+    setState("form");
+    setEmails([]);
+    setEmailInput("");
+    setRole("viewer");
+    setGiveAllApps(false);
+    setSelectedApps([]);
+    setMessage("");
+    setInviteResults([]);
+  };
 
   const handleClose = () => {
-    onOpenChange(false)
+    onOpenChange(false);
     setTimeout(() => {
-      setState("form")
-      setEmails([])
-      setEmailInput("")
-      setRole("viewer")
-      setGiveAllApps(false)
-      setSelectedApps([])
-      setMessage("")
-      setEmailError(null)
-      setInviteResults([])
-    }, 200)
-  }
+      setState("form");
+      setEmails([]);
+      setEmailInput("");
+      setRole("viewer");
+      setGiveAllApps(false);
+      setSelectedApps([]);
+      setMessage("");
+      setEmailError(null);
+      setInviteResults([]);
+    }, 200);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -207,7 +248,9 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
           <>
             <DialogHeader>
               <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>Send an invitation to join your organization</DialogDescription>
+              <DialogDescription>
+                Send an invitation to join your organization
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6 py-4">
@@ -218,19 +261,24 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                   {emails.map((email) => (
                     <Badge key={email} variant="secondary" className="gap-1">
                       {email}
-                      <button onClick={() => removeEmail(email)} className="ml-1 hover:text-red-500">
+                      <button
+                        onClick={() => removeEmail(email)}
+                        className="ml-1 hover:text-red-500"
+                      >
                         <X className="w-3 h-3" />
                       </button>
                     </Badge>
                   ))}
                   <Input
                     type="email"
-                    placeholder={emails.length === 0 ? "Enter email addresses..." : ""}
+                    placeholder={
+                      emails.length === 0 ? "Enter email addresses..." : ""
+                    }
                     className="flex-1 border-0 shadow-none focus-visible:ring-0 min-w-32 h-6 p-0"
                     value={emailInput}
                     onChange={(e) => {
-                      setEmailInput(e.target.value)
-                      setEmailError(null)
+                      setEmailInput(e.target.value);
+                      setEmailError(null);
                     }}
                     onKeyDown={handleEmailKeyDown}
                     onBlur={addEmail}
@@ -239,7 +287,9 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 {emailError ? (
                   <p className="text-xs text-red-500">{emailError}</p>
                 ) : (
-                  <p className="text-xs text-slate-500">Press Enter or comma to add multiple emails</p>
+                  <p className="text-xs text-slate-500">
+                    Press Enter or comma to add multiple emails
+                  </p>
                 )}
               </div>
 
@@ -276,32 +326,59 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                   rows={3}
                   maxLength={500}
                 />
-                <p className="text-xs text-slate-500 text-right">{message.length}/500</p>
+                <p className="text-xs text-slate-500 text-right">
+                  {message.length}/500
+                </p>
               </div>
 
               {/* Preview */}
               <Collapsible open={showPreview} onOpenChange={setShowPreview}>
                 <CollapsibleTrigger className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-                  <ChevronDown className={cn("w-4 h-4 transition-transform", showPreview && "rotate-180")} />
+                  <ChevronDown
+                    className={cn(
+                      "w-4 h-4 transition-transform",
+                      showPreview && "rotate-180",
+                    )}
+                  />
                   Preview invitation email
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <div className="p-4 bg-slate-50 rounded-lg border text-sm space-y-3">
-                    <p className="font-medium">Subject: You&apos;ve been invited to join Amobear Inc on Nexus</p>
-                    <div className="border-t pt-3 space-y-2 text-slate-600">
+                  <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4 text-sm">
+                    <p className="font-medium text-foreground">
+                      Subject: You&apos;ve been invited to join Amobear Inc on
+                      Nexus
+                    </p>
+
+                    <div className="space-y-2 border-t border-border pt-3 text-muted-foreground">
                       <p>Hi there,</p>
+
                       <p>
-                        John Doe has invited you to join Amobear Inc on Nexus as a{" "}
-                        <strong className="text-slate-900 capitalize">{role}</strong>.
+                        John Doe has invited you to join Amobear Inc on Nexus as
+                        a{" "}
+                        <strong className="capitalize text-foreground">
+                          {role}
+                        </strong>
+                        .
                       </p>
-                      {message && <div className="bg-white p-3 rounded border italic">&quot;{message}&quot;</div>}
-                      <p>Click the button below to accept your invitation and create your account.</p>
+
+                      {message && (
+                        <div className="rounded border border-border bg-background p-3 italic text-foreground">
+                          &quot;{message}&quot;
+                        </div>
+                      )}
+
+                      <p>
+                        Click the button below to accept your invitation and
+                        create your account.
+                      </p>
+
                       <div className="py-2">
-                        <Button size="sm" className="bg-blue-600">
-                          Accept Invitation
-                        </Button>
+                        <Button size="sm">Accept Invitation</Button>
                       </div>
-                      <p className="text-xs text-slate-400">This invitation will expire in 7 days.</p>
+
+                      <p className="text-xs text-muted-foreground">
+                        This invitation will expire in 7 days.
+                      </p>
                     </div>
                   </div>
                 </CollapsibleContent>
@@ -309,12 +386,18 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
             </div>
 
             <DialogFooter className="flex-col sm:flex-row gap-2">
-              <p className="text-xs text-slate-500 flex-1">Invitations expire in 7 days</p>
+              <p className="text-xs text-slate-500 flex-1">
+                Invitations expire in 7 days
+              </p>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleClose}>
                   Cancel
                 </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={emails.length === 0}>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={handleSubmit}
+                  disabled={emails.length === 0}
+                >
                   Send Invitation
                 </Button>
               </div>
@@ -325,7 +408,9 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
         {state === "loading" && (
           <div className="py-12 flex flex-col items-center justify-center">
             <Loader2 className="w-10 h-10 text-blue-600 animate-spin mb-4" />
-            <p className="text-lg font-medium text-slate-900">Sending invitations...</p>
+            <p className="text-lg font-medium text-slate-900">
+              Sending invitations...
+            </p>
             <p className="text-sm text-slate-500">Please wait</p>
           </div>
         )}
@@ -336,9 +421,12 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Invitations sent!</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">
+                Invitations sent!
+              </h2>
               <p className="text-sm text-slate-500 mb-4">
-                We&apos;ve sent invitations to {emails.length} email address{emails.length > 1 ? "es" : ""}.
+                We&apos;ve sent invitations to {emails.length} email address
+                {emails.length > 1 ? "es" : ""}.
               </p>
               <div className="space-y-2 w-full max-w-sm">
                 {emails.map((email) => (
@@ -356,7 +444,10 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               <Button variant="outline" onClick={handleInviteMore}>
                 Invite More
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleClose}
+              >
                 Done
               </Button>
             </DialogFooter>
@@ -369,19 +460,25 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
                 <AlertCircle className="w-8 h-8 text-amber-600" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-1">Partial success</h2>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">
+                Partial success
+              </h2>
               <p className="text-sm text-slate-500 mb-4">
-                {inviteResults.filter(r => r.success).length} of {inviteResults.length} invitation{inviteResults.length > 1 ? "s" : ""} sent.
-                {inviteResults.filter(r => !r.success).length > 0 && ` ${inviteResults.filter(r => !r.success).length} failed:`}
+                {inviteResults.filter((r) => r.success).length} of{" "}
+                {inviteResults.length} invitation
+                {inviteResults.length > 1 ? "s" : ""} sent.
+                {inviteResults.filter((r) => !r.success).length > 0 &&
+                  ` ${inviteResults.filter((r) => !r.success).length} failed:`}
               </p>
               <div className="space-y-2 w-full max-w-sm">
                 {inviteResults.map((result) => (
                   <div
                     key={result.email}
-                    className={`flex items-center gap-2 text-sm rounded-md px-3 py-2 ${result.success
-                      ? "text-slate-600 bg-slate-50"
-                      : "text-red-600 bg-red-50"
-                      }`}
+                    className={`flex items-center gap-2 text-sm rounded-md px-3 py-2 ${
+                      result.success
+                        ? "text-slate-600 bg-slate-50"
+                        : "text-red-600 bg-red-50"
+                    }`}
                   >
                     {result.success ? (
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -390,7 +487,9 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                     )}
                     <span className="flex-1 text-left">{result.email}</span>
                     {result.error && (
-                      <span className="text-xs text-red-500">- {result.error}</span>
+                      <span className="text-xs text-red-500">
+                        - {result.error}
+                      </span>
                     )}
                   </div>
                 ))}
@@ -400,7 +499,10 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               <Button variant="outline" onClick={handleInviteMore}>
                 Invite More
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleClose}>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleClose}
+              >
                 Done
               </Button>
             </DialogFooter>
@@ -408,5 +510,5 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

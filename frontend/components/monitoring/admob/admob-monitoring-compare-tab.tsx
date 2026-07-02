@@ -277,14 +277,14 @@ export function AdmobMonitoringCompareTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Filters</CardTitle>
           <CardDescription>Filter by date, source table, status, platform, or app name/app id/app store id.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
             <div className="space-y-1.5">
               <Label htmlFor="start-date">Start date</Label>
               <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -337,14 +337,21 @@ export function AdmobMonitoringCompareTab() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="app-search">Search apps</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="app-search"
+                  className="min-w-0"
                   value={appSearch}
                   onChange={(e) => setAppSearch(e.target.value)}
                   placeholder="Name, App ID, Store ID..."
                 />
-                <Button type="button" variant="outline" size="icon" onClick={applyFilters}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="self-start sm:self-auto"
+                  onClick={applyFilters}
+                >
                   <Search className="h-4 w-4" />
                 </Button>
               </div>
@@ -362,14 +369,15 @@ export function AdmobMonitoringCompareTab() {
             </CardDescription>
           </div>
           {selectedCount > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <span className="text-sm font-medium text-muted-foreground">{selectedCount} selected</span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex">
+                  <span className="flex w-full sm:w-auto">
                     <Button
                       type="button"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       onClick={() => void recompareSelected()}
                       disabled={!canRun || recomparing || resyncing}
                     >
@@ -388,9 +396,10 @@ export function AdmobMonitoringCompareTab() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex">
+                  <span className="flex w-full sm:w-auto">
                     <Button
                       type="button"
+                      className="w-full sm:w-auto"
                       onClick={() => void resyncSelected()}
                       disabled={!canRun || resyncing || recomparing}
                     >
@@ -412,7 +421,7 @@ export function AdmobMonitoringCompareTab() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-auto">
-            <Table>
+            <Table className="min-w-[1180px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">

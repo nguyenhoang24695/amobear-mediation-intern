@@ -400,7 +400,7 @@ export function AdmobMonitoringTrafficChartTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Filters</CardTitle>
@@ -409,13 +409,13 @@ export function AdmobMonitoringTrafficChartTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1 space-y-1.5">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="min-w-0 space-y-1.5">
               <Label>Created time range</Label>
               <TrafficTimeRangePicker value={timeRange} onChange={setTimeRange} maxDays={90} />
             </div>
-            <div className="flex shrink-0 flex-wrap items-end gap-2">
-              <div className="w-[150px] space-y-1.5">
+            <div className="grid gap-3 sm:grid-cols-3 lg:w-auto lg:justify-end">
+              <div className="min-w-0 space-y-1.5">
                 <Label>Type</Label>
                 <Select value={callType} onValueChange={setCallType}>
                   <SelectTrigger className="h-10">
@@ -431,7 +431,7 @@ export function AdmobMonitoringTrafficChartTab() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-[170px] space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label>Publisher</Label>
                 <Select value={publisherId} onValueChange={setPublisherId}>
                   <SelectTrigger className="h-10">
@@ -447,7 +447,7 @@ export function AdmobMonitoringTrafficChartTab() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-[150px] space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label>HTTP status</Label>
                 <Select value={responseHttpStatus} onValueChange={setResponseHttpStatus}>
                   <SelectTrigger className="h-10">
@@ -467,12 +467,7 @@ export function AdmobMonitoringTrafficChartTab() {
                 </Select>
               </div>
             </div>
-            <Button
-              type="button"
-              className="h-10 shrink-0 px-4"
-              onClick={applyFilters}
-              disabled={loading || loadingOptions}
-            >
+            <Button type="button" className="h-10 w-full px-4 lg:w-auto" onClick={applyFilters} disabled={loading || loadingOptions}>
               {loading || loadingOptions ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -496,16 +491,16 @@ export function AdmobMonitoringTrafficChartTab() {
               {chart ? ` · grouped by ${chart.bucket}` : ""}
             </CardDescription>
           </div>
-          <div className="flex flex-col gap-2 sm:items-end">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex rounded-lg border border-border bg-background p-1">
+          <div className="flex flex-col gap-3 sm:items-end">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+              <div className="flex w-full rounded-lg border border-border bg-background p-1 sm:w-auto">
                 {BUCKET_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
                     type="button"
                     size="sm"
                     variant={bucketMode === option.value ? "default" : "ghost"}
-                    className={cn("h-8 px-3", bucketMode !== option.value && "text-muted-foreground")}
+                    className={cn("h-8 flex-1 px-3 sm:flex-none", bucketMode !== option.value && "text-muted-foreground")}
                     onClick={() => setBucketMode(option.value)}
                     disabled={loading}
                   >
@@ -513,14 +508,14 @@ export function AdmobMonitoringTrafficChartTab() {
                   </Button>
                 ))}
               </div>
-              <div className="flex rounded-lg border border-border bg-background p-1">
+              <div className="flex w-full rounded-lg border border-border bg-background p-1 sm:w-auto">
                 {CHART_TYPE_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
                     type="button"
                     size="sm"
                     variant={chartType === option.value ? "default" : "ghost"}
-                    className={cn("h-8 px-3", chartType !== option.value && "text-muted-foreground")}
+                    className={cn("h-8 flex-1 px-3 sm:flex-none", chartType !== option.value && "text-muted-foreground")}
                     onClick={() => setChartType(option.value)}
                     disabled={loading}
                   >
