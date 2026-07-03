@@ -107,6 +107,8 @@ export function DataSourcesContent() {
         ))}
       </div>
 
+      {timeline && timeline.jobs.length > 0 ? <SyncJobsTimeline timeline={timeline} /> : null}
+
       <Tabs value={mainTab} onValueChange={setMainTab} className="w-full">
         <div className="-mx-1 overflow-x-auto px-1 pb-1">
           <TabsList className="mb-4 inline-flex h-auto min-w-max justify-start">
@@ -117,7 +119,6 @@ export function DataSourcesContent() {
         </div>
         <TabsContent value="overview" className="space-y-6 mt-0">
           {overview && <SourcesOverviewGrid sources={overview.sources} />}
-          {timeline && timeline.jobs.length > 0 && <SyncJobsTimeline timeline={timeline} />}
           {overview && <DataQualityMonitor rows={overview.quality} />}
 
           <ArchitectureDiagram />

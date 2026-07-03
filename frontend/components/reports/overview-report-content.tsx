@@ -95,7 +95,7 @@ const SHARED_APP_CONFLICTS_DISPLAY_MAX = 5
 const OVERVIEW_STICKY_HEADER_ROW_2_TOP = "top-10"
 const OVERVIEW_STICKY_HEADER_ROW_3_TOP = "top-[4.5rem]"
 const OVERVIEW_STICKY_TOTAL_ROW_CLASS =
-  "sticky top-[6.5rem] z-[35] bg-muted shadow-[0_4px_6px_-2px_rgba(15,23,42,0.12)]"
+  "sticky top-[6.5rem] z-[35] bg-muted dark:bg-slate-950/95 shadow-[0_4px_6px_-2px_rgba(15,23,42,0.12)]"
 const OVERVIEW_STICKY_TOTAL_ROW_CELL_CLASS = "!h-10 min-h-10 max-h-10 py-0 box-border align-middle"
 const OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS = "!h-8 min-h-8 max-h-8 py-0.5 box-border align-middle"
 
@@ -113,24 +113,24 @@ const OVERVIEW_COLUMN_STYLES: Record<
   }
 > = {
   revenue: {
-    sidebarSelected: "bg-sky-50 text-sky-900 dark:bg-sky-950/50 dark:text-sky-100",
-    sidebarAccent: "bg-sky-500",
-    sidebarCheckbox: "border-sky-600 bg-sky-600 dark:border-sky-400 dark:bg-sky-500",
-    groupHeader: "bg-sky-50/80 text-sky-700 dark:bg-sky-950/45 dark:text-sky-200",
-    header: "bg-sky-50 text-sky-900 dark:bg-sky-950/60 dark:text-sky-100",
-    cell: "bg-sky-50/35 dark:bg-sky-950/28",
-    cellSubtle: "bg-sky-50/55 dark:bg-sky-950/40",
-    border: "border-sky-200 dark:border-sky-900/70",
+    sidebarSelected: "bg-slate-50 text-slate-900 dark:bg-slate-800 dark:text-slate-50",
+    sidebarAccent: "bg-slate-500",
+    sidebarCheckbox: "border-slate-600 bg-slate-600 dark:border-slate-400 dark:bg-slate-500",
+    groupHeader: "bg-slate-100/85 text-slate-700 dark:bg-slate-800 dark:text-slate-100",
+    header: "bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-50",
+    cell: "bg-slate-100/60 dark:bg-slate-900/95",
+    cellSubtle: "bg-slate-100/80 dark:bg-slate-800/95",
+    border: "border-slate-200 dark:border-slate-700",
   },
   performance: {
-    sidebarSelected: "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100",
-    sidebarAccent: "bg-emerald-500",
-    sidebarCheckbox: "border-emerald-600 bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-500",
-    groupHeader: "bg-emerald-50/80 text-emerald-700 dark:bg-emerald-950/45 dark:text-emerald-200",
-    header: "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100",
-    cell: "bg-emerald-50/35 dark:bg-emerald-950/28",
-    cellSubtle: "bg-emerald-50/55 dark:bg-emerald-950/40",
-    border: "border-emerald-200 dark:border-emerald-900/70",
+    sidebarSelected: "bg-slate-50 text-slate-900 dark:bg-slate-800 dark:text-slate-50",
+    sidebarAccent: "bg-slate-500",
+    sidebarCheckbox: "border-slate-600 bg-slate-600 dark:border-slate-400 dark:bg-slate-500",
+    groupHeader: "bg-slate-100/85 text-slate-700 dark:bg-slate-800 dark:text-slate-100",
+    header: "bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-50",
+    cell: "bg-slate-100/60 dark:bg-slate-900/95",
+    cellSubtle: "bg-slate-100/80 dark:bg-slate-800/95",
+    border: "border-slate-200 dark:border-slate-700",
   },
 }
 
@@ -335,27 +335,31 @@ function renderPlatformBadge(platformValue: string, options?: { compact?: boolea
   const platform = platformValue || "Unknown"
   const isAndroid = platform.toUpperCase() === "ANDROID"
   const compact = options?.compact ?? false
+  const platformLabel = isAndroid ? "Android" : platform.toUpperCase() === "IOS" ? "iOS" : platform
+  const iconSizeClass = compact ? "h-2.5 w-2.5" : "h-3 w-3"
 
   return (
     <Badge
       variant="outline"
       className={cn(
-        compact ? "gap-1 px-2 py-0 text-[11px]" : "gap-1",
+        compact ? "h-6 w-6 justify-center p-0" : "gap-1 px-2 py-0.5 text-[11px]",
         isAndroid
           ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
           : "border-border bg-muted/50 text-foreground",
       )}
+      title={platformLabel}
+      aria-label={platformLabel}
     >
       {isAndroid ? (
-        <svg className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")} viewBox="0 0 24 24" fill="currentColor">
+        <svg className={iconSizeClass} viewBox="0 0 24 24" fill="currentColor">
           <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
         </svg>
       ) : (
-        <svg className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")} viewBox="0 0 24 24" fill="currentColor">
+        <svg className={iconSizeClass} viewBox="0 0 24 24" fill="currentColor">
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
         </svg>
       )}
-      {platform}
+      {!compact ? <span>{platformLabel}</span> : null}
     </Badge>
   )
 }
@@ -461,12 +465,28 @@ function getAppMonthsFiltered(
 }
 
 function normalizeOverviewResponse(raw: ProfitOverviewReportResponse): ProfitOverviewReportResponse {
-  return {
-    ...raw,
-    teams: (raw.teams ?? []).map((team) => ({
+  const teamsById = new Map<string, ProfitOverviewTeamRow>()
+  for (const team of raw.teams ?? []) {
+    const normalizedId = normalizeTeamId(team.teamId)
+    if (!teamsById.has(normalizedId)) {
+      teamsById.set(normalizedId, {
+        ...team,
+        months: normalizeMonthsRecord(team.months),
+      })
+      continue
+    }
+
+    const existing = teamsById.get(normalizedId)!
+    teamsById.set(normalizedId, {
+      ...existing,
       ...team,
       months: normalizeMonthsRecord(team.months),
-    })),
+    })
+  }
+
+  return {
+    ...raw,
+    teams: [...teamsById.values()],
   }
 }
 
@@ -543,34 +563,35 @@ function TeamAppsPager({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 py-1 text-sm",
-        isMobile ? "min-w-0" : "sm:flex-row sm:flex-wrap sm:items-center",
+        "flex flex-col gap-1.5 py-1 text-sm xl:flex-row xl:flex-wrap xl:items-center xl:gap-2",
+        "max-xl:min-w-0",
       )}
     >
-      <span className="shrink-0 text-muted-foreground">
+      <span className="shrink-0 text-xs text-muted-foreground xl:text-sm">
         Apps <span className="font-medium text-foreground">{start}</span>–
         <span className="font-medium text-foreground">{end}</span> of{" "}
         <span className="font-medium text-foreground">{totalItems}</span>
       </span>
-      <div className={cn("flex shrink-0 items-center gap-2", isMobile && "w-full justify-between gap-1")}>
+      <div className="flex shrink-0 items-center justify-between gap-1 max-xl:w-full xl:justify-start xl:gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className={cn("h-8", isMobile && "h-7 px-2 text-xs")}
+          className="h-6 px-2 text-[11px] xl:h-8 xl:px-3 xl:text-sm"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(currentPage - 1)}
         >
-          {isMobile ? "Prev" : "Previous"}
+          <span className="xl:hidden">Prev</span>
+          <span className="hidden xl:inline">Previous</span>
         </Button>
-        <span className={cn("tabular-nums text-muted-foreground", isMobile && "text-xs")}>
+        <span className="tabular-nums text-[11px] text-muted-foreground xl:text-sm">
           {currentPage} / {totalPages}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className={cn("h-8", isMobile && "h-7 px-2 text-xs")}
+          className="h-6 px-2 text-[11px] xl:h-8 xl:px-3 xl:text-sm"
           disabled={currentPage >= totalPages}
           onClick={() => onPageChange(currentPage + 1)}
         >
@@ -589,6 +610,7 @@ function OverviewMonthCells({
   trailingCell,
   stickyTotalRowClass,
   asHeader = false,
+  isMobile = false,
 }: {
   months: Record<string, ProfitOverviewMonthCell>
   monthKeys: string[]
@@ -597,6 +619,7 @@ function OverviewMonthCells({
   trailingCell?: ProfitOverviewMonthCell | null
   stickyTotalRowClass?: string
   asHeader?: boolean
+  isMobile?: boolean
 }) {
   const CellComponent = asHeader ? TableHead : TableCell
 
@@ -614,6 +637,16 @@ function OverviewMonthCells({
             : rowVariant === "total"
               ? "bg-muted"
               : columnStyle.cell
+        const mobileBgClass =
+          isMobile && rowVariant !== "total"
+            ? rowVariant === "app"
+              ? column.group === "revenue"
+                ? "bg-slate-100/95 dark:bg-slate-900/95"
+                : "bg-slate-100/95 dark:bg-slate-900/95"
+              : column.group === "revenue"
+                ? "bg-slate-100/88 dark:bg-slate-800/95"
+                : "bg-slate-100/88 dark:bg-slate-800/95"
+            : ""
         const isFirstColumn = columnIndex === 0
         const isLastColumnInGroup = columnIndex === visibleColumns.length - 1
         const isTrailingTotal = options?.isTrailingTotal ?? false
@@ -633,6 +666,7 @@ function OverviewMonthCells({
                 : "",
               isLastColumnInGroup ? "border-r-2 border-border" : cn("border-r", columnStyle.border),
               bgClass,
+              mobileBgClass,
               rowVariant === "total" ? "font-semibold" : "",
               overviewColumnCellClassName(column.id, cell),
             )}
@@ -760,8 +794,8 @@ export function OverviewReportContent() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const isMobile = useIsMobile()
   const overviewStickyFirstColWidth = isMobile
-    ? "min-w-[164px] max-w-[164px] w-[164px]"
-    : "min-w-[280px]"
+    ? "min-w-[140px] max-w-[140px] w-[140px]"
+    : "min-w-[170px] max-w-[170px] w-[170px] xl:min-w-[280px] xl:max-w-[280px] xl:w-[280px]"
   const overviewStickyNestedRowPadding = isMobile ? "pl-6" : "pl-10"
   const overviewStickyPagerPadding = isMobile ? "pl-4" : "pl-12"
 
@@ -1115,15 +1149,24 @@ export function OverviewReportContent() {
   }, [filterTeams])
 
   const teams = useMemo(() => {
-    if (selectedTeamIds.length === 0) return allTeams
+    const dedupedAllTeams = (() => {
+      const byId = new Map<string, ProfitOverviewTeamRow>()
+      for (const team of allTeams) {
+        const normalizedId = normalizeTeamId(team.teamId)
+        if (!byId.has(normalizedId)) byId.set(normalizedId, team)
+      }
+      return [...byId.values()]
+    })()
+
+    if (selectedTeamIds.length === 0) return dedupedAllTeams
 
     const selected = new Set(selectedTeamIds.map(normalizeTeamId))
-    const dataById = new Map(allTeams.map((team) => [normalizeTeamId(team.teamId), team]))
+    const dataById = new Map(dedupedAllTeams.map((team) => [normalizeTeamId(team.teamId), team]))
 
     const orderedCandidates =
       filterTeams.length > 0
         ? filterTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
-        : allTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
+        : dedupedAllTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
 
     return orderedCandidates.map((candidate) => {
       const row = dataById.get(normalizeTeamId(candidate.teamId))
@@ -1697,6 +1740,7 @@ export function OverviewReportContent() {
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
                                 "bg-muted",
+                                isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               Revenue
@@ -1711,6 +1755,7 @@ export function OverviewReportContent() {
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.performance.groupHeader,
                                 "bg-muted",
+                                isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               Performance
@@ -1728,6 +1773,7 @@ export function OverviewReportContent() {
                               OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                               OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
                               "bg-muted",
+                              isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                             )}
                           >
                             Revenue
@@ -1742,6 +1788,7 @@ export function OverviewReportContent() {
                               OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                               OVERVIEW_COLUMN_STYLES.performance.groupHeader,
                               "bg-muted",
+                              isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                             )}
                           >
                             Performance
@@ -1761,8 +1808,8 @@ export function OverviewReportContent() {
                                 key={`${month}-${column.id}`}
                                 className={cn(
                                   column.minWidthClass,
-                                  "sticky z-40 text-right text-xs font-medium",
-                                  OVERVIEW_STICKY_HEADER_ROW_3_TOP,
+                                "sticky z-40 text-right text-xs font-medium",
+                                OVERVIEW_STICKY_HEADER_ROW_3_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 columnStyle.header,
                                 isFirstColumn ? cn("border-l", columnStyle.border) : "",
@@ -1770,6 +1817,8 @@ export function OverviewReportContent() {
                                   ? "border-r-2 border-border"
                                   : cn("border-r", columnStyle.border),
                                 "bg-muted",
+                                isMobile &&
+                                  "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               {column.label}
@@ -1797,6 +1846,8 @@ export function OverviewReportContent() {
                                   ? "border-r-2 border-border"
                                   : cn("border-r", columnStyle.border),
                                 "bg-muted",
+                                isMobile &&
+                                  "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               {column.label}
@@ -1813,6 +1864,7 @@ export function OverviewReportContent() {
                         rowVariant="total"
                         trailingCell={grandTotalCell}
                         stickyTotalRowClass={OVERVIEW_STICKY_TOTAL_ROW_CLASS}
+                        isMobile={isMobile}
                         asHeader
                       />
                     </TableRow>
@@ -1874,6 +1926,7 @@ export function OverviewReportContent() {
                               months={team.months}
                               visibleColumns={visibleColumns}
                               trailingCell={aggregateMonthsRecord(team.months, months)}
+                              isMobile={isMobile}
                             />
                           </TableRow>
                           {expanded && appsLoading ? (
@@ -1965,9 +2018,9 @@ export function OverviewReportContent() {
                                       </Avatar>
                                       {renderPlatformBadge(app.appPlatform ?? "", { compact: true })}
                                     </div>
-                                  ) : (
-                                    <div className="flex min-w-0 items-center justify-between gap-3">
-                                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                                ) : (
+                                    <>
+                                      <div className="flex min-w-0 items-center gap-3 xl:hidden">
                                         <Avatar className="h-8 w-8 shrink-0 rounded-lg">
                                           {app.appIconUri ? (
                                             <AvatarImage
@@ -1980,53 +2033,71 @@ export function OverviewReportContent() {
                                             {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
                                           </AvatarFallback>
                                         </Avatar>
-                                        <div className="min-w-0 flex-1">
-                                          <div className="truncate text-sm font-medium text-foreground">
-                                            {app.appLabel}
-                                          </div>
-                                          <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                                            <span
-                                              className="min-w-0 truncate font-mono"
-                                              title={app.appStoreId ?? undefined}
-                                            >
-                                              {formatAppStoreId(app.appStoreId)}
-                                            </span>
-                                            {app.appStoreId ? (
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                aria-label={`Copy App Store ID for ${app.appLabel}`}
-                                                onClick={(event) => {
-                                                  event.stopPropagation()
-                                                  void copyAppStoreId(appStoreCopyKey, app.appStoreId)
-                                                }}
-                                              >
-                                                <Copy className="h-3 w-3" />
-                                              </Button>
-                                            ) : null}
-                                            {appStoreCopied ? (
-                                              <span className="shrink-0 text-xs font-medium text-green-600">
-                                                Copied!
-                                              </span>
-                                            ) : null}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="shrink-0">
                                         {renderPlatformBadge(app.appPlatform ?? "")}
                                       </div>
-                                    </div>
+                                      <div className="hidden min-w-0 items-center justify-between gap-3 xl:flex">
+                                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                                          <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                                            {app.appIconUri ? (
+                                              <AvatarImage
+                                                src={app.appIconUri}
+                                                alt={app.appLabel}
+                                                className="rounded-lg object-cover"
+                                              />
+                                            ) : null}
+                                            <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
+                                              {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="min-w-0 flex-1">
+                                            <div className="truncate text-sm font-medium text-foreground">
+                                              {app.appLabel}
+                                            </div>
+                                            <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                                              <span
+                                                className="min-w-0 truncate font-mono"
+                                                title={app.appStoreId ?? undefined}
+                                              >
+                                                {formatAppStoreId(app.appStoreId)}
+                                              </span>
+                                              {app.appStoreId ? (
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                  aria-label={`Copy App Store ID for ${app.appLabel}`}
+                                                  onClick={(event) => {
+                                                    event.stopPropagation()
+                                                    void copyAppStoreId(appStoreCopyKey, app.appStoreId)
+                                                  }}
+                                                >
+                                                  <Copy className="h-3 w-3" />
+                                                </Button>
+                                              ) : null}
+                                              {appStoreCopied ? (
+                                                <span className="shrink-0 text-xs font-medium text-green-600">
+                                                  Copied!
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="shrink-0">
+                                          {renderPlatformBadge(app.appPlatform ?? "")}
+                                        </div>
+                                      </div>
+                                    </>
                                   )}
                                 </TableCell>
-                                <OverviewMonthCells
-                                  monthKeys={months}
-                                  months={filteredAppMonths}
-                                  visibleColumns={visibleColumns}
-                                  rowVariant="app"
-                                  trailingCell={aggregateMonthsRecord(filteredAppMonths, months)}
-                                />
+                              <OverviewMonthCells
+                                monthKeys={months}
+                                months={filteredAppMonths}
+                                visibleColumns={visibleColumns}
+                                rowVariant="app"
+                                trailingCell={aggregateMonthsRecord(filteredAppMonths, months)}
+                                isMobile={isMobile}
+                              />
                               </TableRow>
                               )
                             })}

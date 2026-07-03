@@ -84,6 +84,7 @@ import {
   formatRuleConditionsSummary,
   parseAlertRuleConfig,
 } from "./alert-rule-details-dialog";
+import { useIsMobile } from "@/components/ui/use-mobile";
 
 const severityOptions = ["All", "HIGH", "MEDIUM", "LOW"] as const;
 const TIMELINE_PAGE_SIZE = 25;
@@ -235,6 +236,7 @@ export function AlertCenterContentV2() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [severity, setSeverity] = useState<string>("All");
@@ -249,6 +251,8 @@ export function AlertCenterContentV2() {
   const [rulesOverviewStatus, setRulesOverviewStatus] = useState<
     "all" | "enabled" | "disabled"
   >("all");
+  const [rulesOverviewFiltersCollapsed, setRulesOverviewFiltersCollapsed] =
+    useState(false);
   const [overviewTogglingId, setOverviewTogglingId] = useState<number | null>(
     null,
   );
@@ -421,6 +425,12 @@ export function AlertCenterContentV2() {
       hasScreenFunction("s-alerts", "setting-my-alerts"),
     [],
   );
+
+  useEffect(() => {
+    if (!isMobile && rulesOverviewFiltersCollapsed) {
+      setRulesOverviewFiltersCollapsed(false);
+    }
+  }, [isMobile, rulesOverviewFiltersCollapsed]);
 
   const apiListSeverity = severity === "All" ? undefined : severity;
   const apiListAppId = appFilter.trim() || undefined;
@@ -1142,7 +1152,7 @@ export function AlertCenterContentV2() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="border-border">
             <CardContent className="p-6">
               <div className="text-2xl font-bold text-foreground">
@@ -1211,62 +1221,103 @@ export function AlertCenterContentV2() {
       <Card className="border-border">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
-              <CheckCircle2 className="w-5 h-5" />
-              Alert Rules Overview
-            </h2>
-
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col gap-1 min-w-[200px] flex-1 max-w-sm">
-                <Label className="text-xs text-muted-foreground">App</Label>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    className="pl-9"
-                    placeholder="Search by app name or appId..."
-                    value={rulesOverviewAppQuery}
-                    onChange={(e) => setRulesOverviewAppQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-1 min-w-[140px]">
-                <Label className="text-xs text-muted-foreground">Metric</Label>
-                <Select
-                  value={rulesOverviewMetric}
-                  onValueChange={setRulesOverviewMetric}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="All metrics" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All metrics</SelectItem>
-                    {rulesMetricOptions.map((key) => (
-                      <SelectItem key={key} value={key}>
-                        {key}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1 min-w-[140px]">
-                <Label className="text-xs text-muted-foreground">Status</Label>
-                <Select
-                  value={rulesOverviewStatus}
-                  onValueChange={(v) =>
-                    setRulesOverviewStatus(v as "all" | "enabled" | "disabled")
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
+                <CheckCircle2 className="w-5 h-5" />
+                Alert Rules Overview
+              </h2>
+              {isMobile ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2 text-muted-foreground"
+                  onClick={() =>
+                    setRulesOverviewFiltersCollapsed((prev) => !prev)
+                  }
+                  aria-expanded={!rulesOverviewFiltersCollapsed}
+                  aria-label={
+                    rulesOverviewFiltersCollapsed
+                      ? "Expand alert rules filters"
+                      : "Collapse alert rules filters"
                   }
                 >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="enabled">Enabled</SelectItem>
-                    <SelectItem value="disabled">Disabled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  {rulesOverviewFiltersCollapsed
+                    ? "Show filters"
+                    : "Hide filters"}
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      rulesOverviewFiltersCollapsed
+                        ? "-rotate-90"
+                        : "rotate-0",
+                    )}
+                  />
+                </Button>
+              ) : null}
             </div>
+
+            {!rulesOverviewFiltersCollapsed ? (
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <Label className="text-xs text-muted-foreground">App</Label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      placeholder="Search by app name or appId..."
+                      value={rulesOverviewAppQuery}
+                      onChange={(e) => setRulesOverviewAppQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 md:flex md:gap-3">
+                  <div className="flex min-w-0 flex-col gap-1 md:w-48 md:shrink-0">
+                    <Label className="text-xs text-muted-foreground">
+                      Metric
+                    </Label>
+                    <Select
+                      value={rulesOverviewMetric}
+                      onValueChange={setRulesOverviewMetric}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All metrics" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All metrics</SelectItem>
+                        {rulesMetricOptions.map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-1 md:w-40 md:shrink-0">
+                    <Label className="text-xs text-muted-foreground">
+                      Status
+                    </Label>
+                    <Select
+                      value={rulesOverviewStatus}
+                      onValueChange={(v) =>
+                        setRulesOverviewStatus(
+                          v as "all" | "enabled" | "disabled",
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {rulesLoading ? (
               <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
@@ -1502,97 +1553,97 @@ export function AlertCenterContentV2() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            <div className="space-y-4">
-              {filteredAlerts.map((alert) => (
-                <Card
-                  key={alert.id}
-                  className={`border-l-4 ${
-                    alert.severity === "critical"
-                      ? "border-l-red-500 bg-red-50 dark:bg-red-950/25"
-                      : alert.severity === "warning"
-                        ? "border-l-amber-500 bg-amber-50 dark:bg-amber-950/25"
-                        : "border-l-blue-500 bg-blue-50 dark:bg-blue-950/25"
-                  } border-border`}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex gap-3">
-                      <AlertAppAvatar
-                        appIconUri={alert.appIconUri}
-                        appDisplayName={alert.appLabel}
-                        appId={alert.appId}
-                        severity={alert.severity}
-                        size="md"
-                      />
-                      <div className="flex-1 min-w-0 space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold text-foreground">
-                            {alert.title}
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            Triggered {formatRelativeTime(alert.timestamp)}
-                          </span>
-                        </div>
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            {filteredAlerts.map((alert) => (
+              <Card
+                key={alert.id}
+                className={`border-l-4 ${
+                  alert.severity === "critical"
+                    ? "border-l-red-500 bg-red-50 dark:bg-red-950/25"
+                    : alert.severity === "warning"
+                      ? "border-l-amber-500 bg-amber-50 dark:bg-amber-950/25"
+                      : "border-l-blue-500 bg-blue-50 dark:bg-blue-950/25"
+                } border-border`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex gap-3">
+                    <AlertAppAvatar
+                      appIconUri={alert.appIconUri}
+                      appDisplayName={alert.appLabel}
+                      appId={alert.appId}
+                      severity={alert.severity}
+                      size="md"
+                    />
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-foreground">
+                          {alert.title}
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          Triggered {formatRelativeTime(alert.timestamp)}
+                        </span>
+                      </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                          {alert.value != null ? (
-                            <span className="font-mono text-sm text-red-600 dark:text-red-400">
-                              {alert.metricLabel}: {alert.value.toFixed(2)}
-                              {alert.threshold != null
-                                ? ` (threshold ${alert.threshold.toFixed(2)})`
-                                : ""}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {alert.slackFinance ? (
-                          <AlertSlackFinanceRow fin={alert.slackFinance} />
+                      <div className="flex flex-wrap items-center gap-3">
+                        {alert.value != null ? (
+                          <span className="font-mono text-sm text-red-600 dark:text-red-400">
+                            {alert.metricLabel}: {alert.value.toFixed(2)}
+                            {alert.threshold != null
+                              ? ` (threshold ${alert.threshold.toFixed(2)})`
+                              : ""}
+                          </span>
                         ) : null}
+                      </div>
 
-                        <p className="text-sm text-muted-foreground">
-                          {alert.description}
-                        </p>
+                      {alert.slackFinance ? (
+                        <AlertSlackFinanceRow fin={alert.slackFinance} />
+                      ) : null}
 
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-transparent"
-                            onClick={() => handleAcknowledge(alert.numericId)}
-                            disabled={actionLoading != null}
-                          >
-                            {actionLoading?.id === alert.numericId &&
-                            actionLoading.type === "ack"
-                              ? "Acknowledging..."
-                              : "Acknowledge"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-transparent"
-                            asChild
-                          >
-                            <Link href={`/alert-center/${alert.id}`}>
-                              View Detail
-                            </Link>
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950/30"
-                            onClick={() => handleResolve(alert.numericId)}
-                            disabled={actionLoading != null}
-                          >
-                            {actionLoading?.id === alert.numericId &&
-                            actionLoading.type === "resolve"
-                              ? "Resolving..."
-                              : "Resolve"}
-                          </Button>
-                        </div>
+                      <p className="text-sm text-muted-foreground">
+                        {alert.description}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-transparent"
+                          onClick={() => handleAcknowledge(alert.numericId)}
+                          disabled={actionLoading != null}
+                        >
+                          {actionLoading?.id === alert.numericId &&
+                          actionLoading.type === "ack"
+                            ? "Acknowledging..."
+                            : "Acknowledge"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-transparent"
+                          asChild
+                        >
+                          <Link href={`/alert-center/${alert.id}`}>
+                            View Detail
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="border-green-600 bg-transparent text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950/30"
+                          onClick={() => handleResolve(alert.numericId)}
+                          disabled={actionLoading != null}
+                        >
+                          {actionLoading?.id === alert.numericId &&
+                          actionLoading.type === "resolve"
+                            ? "Resolving..."
+                            : "Resolve"}
+                        </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
             </div>
             {openAlertsPage && openAlertsPage.TotalCount > 0 ? (
               <Pagination
@@ -1608,7 +1659,7 @@ export function AlertCenterContentV2() {
                 itemName="alerts"
               />
             ) : null}
-          </div>
+          </>
         )}
       </div>
 

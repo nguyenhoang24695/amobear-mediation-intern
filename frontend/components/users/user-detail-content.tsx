@@ -617,16 +617,28 @@ export function UserDetailContent({
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid h-auto w-full grid-cols-2 bg-muted p-1 sm:inline-flex sm:w-fit">
-          <TabsTrigger value="overview" className="px-3 data-[state=active]:bg-background sm:px-4">
+          <TabsTrigger
+            value="overview"
+            className="px-3 data-[state=active]:bg-background sm:px-4"
+          >
             Overview
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="px-3 data-[state=active]:bg-background sm:px-4">
+          <TabsTrigger
+            value="permissions"
+            className="px-3 data-[state=active]:bg-background sm:px-4"
+          >
             Permissions
           </TabsTrigger>
-          <TabsTrigger value="activity" className="px-3 data-[state=active]:bg-background sm:px-4">
+          <TabsTrigger
+            value="activity"
+            className="px-3 data-[state=active]:bg-background sm:px-4"
+          >
             Activity
           </TabsTrigger>
-          <TabsTrigger value="sessions" className="px-3 data-[state=active]:bg-background sm:px-4">
+          <TabsTrigger
+            value="sessions"
+            className="px-3 data-[state=active]:bg-background sm:px-4"
+          >
             Sessions
           </TabsTrigger>
         </TabsList>
@@ -673,7 +685,9 @@ export function UserDetailContent({
                     <div>
                       <p className="text-xs text-muted-foreground">Email</p>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="min-w-0 break-all text-sm font-medium">{user.email}</p>
+                        <p className="min-w-0 break-all text-sm font-medium">
+                          {user.email}
+                        </p>
                         <Badge
                           variant="outline"
                           className={
@@ -688,9 +702,7 @@ export function UserDetailContent({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Phone</p>
-                      <p className="text-sm font-medium">
-                        {user.phone || "-"}
-                      </p>
+                      <p className="text-sm font-medium">{user.phone || "-"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Roles</p>
@@ -829,7 +841,9 @@ export function UserDetailContent({
                     <span className="text-sm text-muted-foreground">
                       Last Login IP
                     </span>
-                    <span className="text-right text-sm">{user.lastLoginIp || "-"}</span>
+                    <span className="text-right text-sm">
+                      {user.lastLoginIp || "-"}
+                    </span>
                   </div>
                   <div className="flex items-start justify-between gap-4">
                     <span className="text-sm text-muted-foreground">
@@ -972,11 +986,11 @@ export function UserDetailContent({
                             </span>
                           </TableCell>
                           <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "gap-1",
-                              perm.platform === "ANDROID"
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-1",
+                                perm.platform === "ANDROID"
                                   ? themePills.positive
                                   : themePills.neutral,
                               )}
@@ -1289,7 +1303,11 @@ export function UserDetailContent({
               <CardTitle className="text-base font-semibold">
                 Active Sessions
               </CardTitle>
-              <Button variant="destructive" size="sm" className="w-full sm:w-auto">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full sm:w-auto"
+              >
                 Revoke All
               </Button>
             </CardHeader>
@@ -1444,7 +1462,10 @@ export function UserDetailContent({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
-            <AlertDialogCancel className="w-full sm:w-auto" disabled={removingFromTeam}>
+            <AlertDialogCancel
+              className="w-full sm:w-auto"
+              disabled={removingFromTeam}
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

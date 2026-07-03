@@ -338,10 +338,10 @@ export function AppDetailContent() {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+          <div className="flex w-full items-center gap-2 lg:w-auto lg:justify-end">
             {canSyncFromAdmob && (
               <Button
-                className="h-9 w-full gap-2 sm:w-auto"
+                className="h-9 flex-1 gap-2 sm:flex-none sm:w-auto"
                 onClick={() => setSyncPerformanceModalOpen(true)}
                 disabled={!app?.appId || appLoading}
               >
@@ -349,22 +349,6 @@ export function AppDetailContent() {
                 Sync Performance
               </Button>
             )}
-            <Button
-              variant="outline"
-              className="h-9 w-full gap-2 bg-transparent text-sm sm:w-auto"
-              onClick={() => window.open("https://admob.google.com", "_blank")}
-            >
-              <ExternalLink className="w-4 h-4" />
-              View in AdMob
-            </Button>
-            <Button
-              variant="outline"
-              className="h-9 w-full gap-2 bg-transparent text-sm sm:w-auto"
-              onClick={() => window.open("https://apps.apple.com", "_blank")}
-            >
-              <Apple className="w-4 h-4" />
-              View in App Store
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-9 w-9 shrink-0 bg-transparent p-0">
@@ -372,6 +356,21 @@ export function AppDetailContent() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  className="gap-2"
+                  onClick={() => window.open("https://admob.google.com", "_blank")}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  View in AdMob
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="gap-2"
+                  onClick={() => window.open("https://apps.apple.com", "_blank")}
+                >
+                  <Apple className="w-4 h-4" />
+                  View in App Store
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem className="gap-2">
                   <Settings className="w-4 h-4" />
                   App Settings

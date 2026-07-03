@@ -145,92 +145,92 @@ function DataAccountsListPanel() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-muted">
-              <Key className="w-5 h-5 text-muted-foreground" />
+            <div className="rounded-lg bg-muted p-2">
+              <Key className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.total}</p>
-              <p className="break-words text-sm text-muted-foreground">Total Accounts</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.total}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">Total Accounts</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-300" />
+            <div className="rounded-lg bg-emerald-500/10 p-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-300 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.active}</p>
-              <p className="break-words text-sm text-muted-foreground">Active</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.active}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">Active</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
+            <div className="rounded-lg bg-destructive/10 p-2">
+              <AlertTriangle className="h-4 w-4 text-destructive sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.errors}</p>
-              <p className="break-words text-sm text-muted-foreground">Errors</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.errors}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">Errors</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-50">
-              <Smartphone className="w-5 h-5 text-amber-600" />
+            <div className="rounded-lg bg-amber-50 p-2">
+              <Smartphone className="h-4 w-4 text-amber-600 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.admob}</p>
-              <p className="break-words text-sm text-muted-foreground">AdMob Accounts</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.admob}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">AdMob Accounts</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-violet-50">
-              <Layers className="w-5 h-5 text-violet-600" />
+            <div className="rounded-lg bg-violet-50 p-2">
+              <Layers className="h-4 w-4 text-violet-600 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.applovin}</p>
-              <p className="break-words text-sm text-muted-foreground">AppLovin Accounts</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.applovin}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">AppLovin Accounts</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-50">
-              <Layers className="w-5 h-5 text-purple-600" />
+            <div className="rounded-lg bg-purple-50 p-2">
+              <Layers className="h-4 w-4 text-purple-600 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.xmp}</p>
-              <p className="break-words text-sm text-muted-foreground">XMP Accounts</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.xmp}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">XMP Accounts</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-sky-50">
-              <Smartphone className="w-5 h-5 text-sky-700" />
+            <div className="rounded-lg bg-sky-50 p-2">
+              <Smartphone className="h-4 w-4 text-sky-700 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.appsflyer}</p>
-              <p className="break-words text-sm text-muted-foreground">AppsFlyer</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.appsflyer}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">AppsFlyer</p>
             </div>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-fuchsia-50">
-              <Layers className="w-5 h-5 text-fuchsia-700" />
+            <div className="rounded-lg bg-fuchsia-50 p-2">
+              <Layers className="h-4 w-4 text-fuchsia-700 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-foreground">{loading ? <Loader2 className="w-5 h-5 animate-spin" /> : stats.qonversion}</p>
-              <p className="break-words text-sm text-muted-foreground">Qonversion</p>
+              <p className="text-xl font-bold text-foreground sm:text-2xl">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : stats.qonversion}</p>
+              <p className="break-words text-xs text-muted-foreground sm:text-sm">Qonversion</p>
             </div>
           </div>
         </div>

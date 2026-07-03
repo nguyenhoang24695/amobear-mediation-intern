@@ -413,9 +413,9 @@ export function MediationGroupOverviewTab() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 md:block md:space-y-4">
               {/* Countries */}
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Globe className="w-3 h-3" />
                   Countries
@@ -426,7 +426,7 @@ export function MediationGroupOverviewTab() {
                     Global
                   </div>
                 ) : countries.length > 0 ? (
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-2">
                     {countries.map((country: string) => (
                       <Badge
                         key={country}
@@ -444,7 +444,7 @@ export function MediationGroupOverviewTab() {
               </div>
 
               {/* Devices */}
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Smartphone className="w-3 h-3" />
                   Devices
@@ -453,7 +453,7 @@ export function MediationGroupOverviewTab() {
               </div>
 
               {/* Platform */}
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">Platform</p>
                 <p className="text-sm text-foreground">
                   {groupDetail.platform || "—"}

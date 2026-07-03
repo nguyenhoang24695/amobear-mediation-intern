@@ -168,25 +168,25 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
   if (step === "success") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg border-white/10 bg-[#111827] text-slate-100 shadow-2xl shadow-black/40">
+        <DialogContent className="sm:max-w-lg border-border bg-background text-foreground shadow-2xl">
           <div className="flex flex-col items-center text-center py-6">
             <div className="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center mb-4 ring-1 ring-emerald-500/20">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
             </div>
-            <h2 className="text-xl font-bold text-slate-100 mb-2">Organization created!</h2>
-            <p className="text-sm text-slate-400 mb-1">
-              <span className="font-medium text-slate-200">{orgName}</span> has been created successfully.
+            <h2 className="text-xl font-bold text-foreground mb-2">Organization created!</h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              <span className="font-medium text-foreground">{orgName}</span> has been created successfully.
             </p>
             {createAdmin && adminEmail && (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 An admin account has been created for{" "}
-                <span className="font-medium text-slate-200">{adminEmail}</span>
+                <span className="font-medium text-foreground">{adminEmail}</span>
               </p>
             )}
             <div className="flex gap-3 mt-6">
               <Button
                 variant="outline"
-                className="border-white/10 bg-transparent text-slate-200 hover:bg-white/5 hover:text-white"
+                className="border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
                 onClick={() => {
                   setStep("form")
                   setOrgName("")
@@ -215,7 +215,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto border-white/10 bg-[#111827] text-slate-100 shadow-2xl shadow-black/40">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto border-border bg-background text-foreground shadow-2xl">
         <DialogHeader>
           <DialogTitle>Create New Organization</DialogTitle>
           <DialogDescription>Add a new organization to the platform</DialogDescription>
@@ -224,7 +224,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Section: Basic Information */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200">Basic Information</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">Basic Information</h3>
 
             {/* Organization Name */}
             <div className="space-y-2">
@@ -243,7 +243,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                 disabled={saving}
                 maxLength={100}
               />
-              <p className="text-xs text-slate-400">This will be displayed throughout the platform</p>
+              <p className="text-xs text-muted-foreground">This will be displayed throughout the platform</p>
               {errors.orgName && <p className="text-xs text-red-500">{errors.orgName}</p>}
             </div>
 
@@ -253,7 +253,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                 Organization Slug <span className="text-red-500">*</span>
               </Label>
               <div className="flex">
-                <span className="inline-flex items-center rounded-l-md border border-r-0 border-white/10 bg-slate-900/80 px-3 text-sm text-slate-400">
+                <span className="inline-flex items-center rounded-l-md border border-r-0 border-border bg-muted px-3 text-sm text-muted-foreground">
                   https://
                 </span>
                 <Input
@@ -265,12 +265,12 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                   className={`rounded-none ${errors.slug || slugError ? "border-red-500" : ""}`}
                   disabled={saving}
                 />
-                <span className="inline-flex items-center whitespace-nowrap rounded-r-md border border-l-0 border-white/10 bg-slate-900/80 px-3 text-sm text-slate-400">
+                <span className="inline-flex items-center whitespace-nowrap rounded-r-md border border-l-0 border-border bg-muted px-3 text-sm text-muted-foreground">
                   .nexus.io
                   {slugChecking && <Loader2 className="w-3 h-3 ml-2 animate-spin" />}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-muted-foreground">
                 URL-friendly identifier. Only lowercase letters, numbers, and hyphens.
               </p>
               {(errors.slug || slugError) && (
@@ -280,21 +280,21 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
 
             {/* Logo Upload */}
             <div className="space-y-2">
-              <Label>Organization Logo <span className="text-slate-400">(optional)</span></Label>
+              <Label>Organization Logo <span className="text-muted-foreground">(optional)</span></Label>
               {logoFile ? (
-                <div className="flex items-center gap-3 rounded-lg border border-white/10 bg-slate-950/40 p-3">
-                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-slate-900/80">
-                    <span className="text-xs text-slate-400">Logo</span>
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                  <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-background">
+                    <span className="text-xs text-muted-foreground">Logo</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-200">{logoFile}</p>
-                    <p className="text-xs text-slate-400">Image uploaded</p>
+                    <p className="text-sm font-medium text-foreground">{logoFile}</p>
+                    <p className="text-xs text-muted-foreground">Image uploaded</p>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-slate-400 hover:bg-white/5 hover:text-slate-100"
+                    className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={() => setLogoFile(null)}
                   >
                     <X className="w-4 h-4" />
@@ -303,14 +303,14 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
               ) : (
                 <button
                   type="button"
-                  className="w-full rounded-lg border-2 border-dashed border-white/15 bg-slate-950/30 p-6 flex flex-col items-center gap-2 transition-colors hover:border-blue-400/50 hover:bg-slate-900/60"
+                  className="w-full rounded-lg border-2 border-dashed border-border bg-muted/30 p-6 flex flex-col items-center gap-2 transition-colors hover:border-blue-400/50 hover:bg-muted"
                   onClick={() => setLogoFile("logo.png")}
                 >
-                  <Upload className="w-6 h-6 text-slate-400" />
-                  <span className="text-sm text-slate-300">
+                  <Upload className="w-6 h-6 text-muted-foreground" />
+                  <span className="text-sm text-foreground">
                     Drag & drop or <span className="font-medium text-blue-400">click to upload</span>
                   </span>
-                  <span className="text-xs text-slate-500">PNG, JPG, SVG up to 2MB</span>
+                  <span className="text-xs text-muted-foreground">PNG, JPG, SVG up to 2MB</span>
                 </button>
               )}
             </div>
@@ -322,8 +322,8 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-slate-200">Create admin user for this organization</h3>
-                <p className="mt-0.5 text-xs text-slate-400">Optional: Set up an initial admin account</p>
+                <h3 className="text-sm font-semibold text-foreground">Create admin user for this organization</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">Optional: Set up an initial admin account</p>
               </div>
               <Switch checked={createAdmin} onCheckedChange={setCreateAdmin} disabled={saving} />
             </div>
@@ -399,18 +399,18 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                         className={`pr-10 ${errors.adminPassword ? "border-red-500" : ""}`}
                         disabled={saving}
                       />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
-                      className="gap-1.5 whitespace-nowrap border-white/10 bg-transparent text-slate-200 hover:bg-white/5 hover:text-white"
+                      className="gap-1.5 whitespace-nowrap border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
                       onClick={() => {
                         setAdminPassword(generatePassword())
                         setShowPassword(true)
@@ -422,7 +422,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
                       Generate
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-400">User will be required to change password on first login</p>
+                  <p className="text-xs text-muted-foreground">User will be required to change password on first login</p>
                   {errors.adminPassword && <p className="text-xs text-red-500">{errors.adminPassword}</p>}
                 </div>
               </div>
@@ -433,7 +433,7 @@ export function CreateOrganizationModal({ open, onOpenChange, onSuccess }: Creat
             <Button
               type="button"
               variant="outline"
-              className="border-white/10 bg-transparent text-slate-200 hover:bg-white/5 hover:text-white"
+              className="border-border bg-background text-foreground hover:bg-muted hover:text-foreground"
               onClick={() => onOpenChange(false)}
               disabled={saving}
             >

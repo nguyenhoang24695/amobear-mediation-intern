@@ -252,66 +252,66 @@ export function JobManagementContent() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-muted/25">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Jobs</p>
-                <p className="mt-1 text-2xl font-bold text-foreground">
+                <p className="text-xs font-medium text-muted-foreground sm:text-sm">Total Jobs</p>
+                <p className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
                   {loading ? "..." : jobs.length}
                 </p>
               </div>
-              <div className="rounded-lg border bg-background p-2.5">
-                <Briefcase className="h-5 w-5 text-muted-foreground" />
+              <div className="rounded-lg border bg-background p-2 sm:p-2.5">
+                <Briefcase className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-emerald-500/20 bg-emerald-500/10">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Enabled</p>
-                <p className="mt-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 sm:text-sm">Enabled</p>
+                <p className="mt-1 text-xl font-bold text-emerald-700 dark:text-emerald-300 sm:text-2xl">
                   {loading ? "..." : enabledCount}
                 </p>
               </div>
-              <div className="rounded-lg border border-emerald-500/20 bg-background p-2.5">
-                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+              <div className="rounded-lg border border-emerald-500/20 bg-background p-2 sm:p-2.5">
+                <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-300 sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-muted/25">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Disabled</p>
-                <p className="mt-1 text-2xl font-bold text-foreground">
+                <p className="text-xs font-medium text-muted-foreground sm:text-sm">Disabled</p>
+                <p className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
                   {loading ? "..." : disabledCount}
                 </p>
               </div>
-              <div className="rounded-lg border bg-background p-2.5">
-                <XCircle className="h-5 w-5 text-muted-foreground" />
+              <div className="rounded-lg border bg-background p-2 sm:p-2.5">
+                <XCircle className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-muted/25">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Last Reload</p>
-                <p className="mt-1 text-sm font-semibold text-foreground">
+                <p className="text-xs font-medium text-muted-foreground sm:text-sm">Last Reload</p>
+                <p className="mt-1 text-sm font-semibold text-foreground sm:text-sm">
                   {lastReloadLabel}
                 </p>
               </div>
-              <div className="rounded-lg border bg-background p-2.5">
-                <Clock className="h-5 w-5 text-muted-foreground" />
+              <div className="rounded-lg border bg-background p-2 sm:p-2.5">
+                <Clock className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
               </div>
             </div>
           </CardContent>

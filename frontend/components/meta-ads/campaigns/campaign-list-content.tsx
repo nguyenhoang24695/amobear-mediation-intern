@@ -776,7 +776,7 @@ export function CampaignListContent() {
       {duplicateOperation ? <DuplicateOperationStatus operation={duplicateOperation} /> : null}
       {activeReadiness ? <DuplicateReadinessStatus readiness={activeReadiness} /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard title="Total" value={summary?.total ?? 0} />
         <SummaryCard title="Active" value={summary?.active ?? 0} tone="good" />
         <SummaryCard title="Paused" value={summary?.paused ?? 0} tone="warn" />

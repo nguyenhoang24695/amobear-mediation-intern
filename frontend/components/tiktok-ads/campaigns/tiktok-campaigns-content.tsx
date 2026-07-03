@@ -439,7 +439,7 @@ export function TikTokCampaignsContent() {
 
       {error ? <div className="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <SummaryCard title="Total" value={summary?.total ?? 0} />
         <SummaryCard title="Active" value={summary?.active ?? 0} tone="good" />
         <SummaryCard title="Paused" value={summary?.paused ?? 0} tone="warn" />

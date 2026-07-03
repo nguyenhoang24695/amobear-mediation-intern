@@ -78,10 +78,17 @@ export function FormulaMetricEditor({
       ) : (
         <div className="space-y-1">
           {formulas.map((formula) => (
-            <button
+            <div
               key={formula.id}
-              type="button"
               onClick={() => setEditingId(formula.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault()
+                  setEditingId(formula.id)
+                }
+              }}
               className={cn(
                 "flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-muted/60",
                 editingId === formula.id && "bg-primary/10 text-primary",
@@ -95,10 +102,10 @@ export function FormulaMetricEditor({
                   event.stopPropagation()
                   handleDelete(formula.id)
                 }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </button>
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+            </div>
           ))}
         </div>
       )}

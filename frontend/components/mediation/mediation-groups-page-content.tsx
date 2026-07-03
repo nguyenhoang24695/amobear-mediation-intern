@@ -290,10 +290,10 @@ export function MediationGroupsPageContent() {
       </div>
 
       {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         {/* Left: Search & Filters */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="relative w-full sm:w-72">
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-12 xl:flex xl:flex-1 xl:items-center">
+          <div className="relative w-full lg:col-span-12 xl:w-72">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search groups..."
@@ -303,7 +303,7 @@ export function MediationGroupsPageContent() {
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="grid grid-cols-1 gap-3 lg:col-span-12 lg:grid-cols-12 xl:flex xl:items-center xl:gap-2">
             {/* App Dropdown with Search (by name or appId), display: logo, name, platform, appId */}
             <Popover open={appPopoverOpen} onOpenChange={setAppPopoverOpen}>
               <PopoverTrigger asChild>
@@ -311,7 +311,7 @@ export function MediationGroupsPageContent() {
                   variant="outline"
                   role="combobox"
                   aria-expanded={appPopoverOpen}
-                  className="h-10 w-52 min-w-0 justify-between bg-card"
+                  className="h-10 w-full min-w-0 justify-between bg-card lg:col-span-4 xl:w-52"
                   disabled={apps.length === 0}
                 >
                   {selectedApp === "all" ? (
@@ -386,7 +386,7 @@ export function MediationGroupsPageContent() {
             </Popover>
 
             <Select value={format} onValueChange={(v) => handleFilterChange("Format", v)}>
-              <SelectTrigger className="h-10 w-36 bg-card">
+              <SelectTrigger className="h-10 w-full bg-card lg:col-span-4 xl:w-36">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
@@ -399,7 +399,7 @@ export function MediationGroupsPageContent() {
             </Select>
 
             <Select value={status} onValueChange={(v) => handleFilterChange("Status", v)}>
-              <SelectTrigger className="h-10 w-32 bg-card">
+              <SelectTrigger className="h-10 w-full bg-card lg:col-span-4 xl:w-32">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>

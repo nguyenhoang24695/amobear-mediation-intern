@@ -335,7 +335,7 @@ export function AppOverviewTab({
   return (
     <div className="flex flex-col gap-6">
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {statsCards.length === 0 ? (
           <Card className="border-border sm:col-span-2 xl:col-span-5">
             <CardContent className="flex items-center justify-center p-6 text-sm text-muted-foreground">

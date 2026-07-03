@@ -232,7 +232,7 @@ export function ContextLibraryContent() {
       toast({
         title: "Thành công",
         description: (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-foreground">
             <span>Đã clone context &quot;{cloned.name}&quot;</span>
             <Button 
               variant="link" 
@@ -556,7 +556,7 @@ export function ContextLibraryContent() {
               <span className="text-2xl">{context.icon}</span>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="font-semibold text-foreground">
                     {context.name}
                   </h3>
                   {context.isSystemTemplate && (
@@ -598,11 +598,11 @@ export function ContextLibraryContent() {
                             ? "fill-amber-400 text-amber-400"
                             : i < context.rating
                             ? "fill-amber-400/50 text-amber-400"
-                            : "text-slate-300"
+                            : "text-muted-foreground"
                         )}
                       />
                     ))}
-                    <span className="text-xs text-slate-500 ml-1">
+                    <span className="ml-1 text-xs text-muted-foreground">
                       {context.rating.toFixed(1)}
                     </span>
                   </div>
@@ -636,12 +636,12 @@ export function ContextLibraryContent() {
           </div>
 
           {/* Author & Stats */}
-          <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
+          <div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground">
             {context.sharedByEmail && !isMyContext && (
               <span>By: {context.sharedByEmail}</span>
             )}
             {context.isSystemTemplate && (
-              <span className="text-blue-600 font-medium">By: Amobear Team</span>
+              <span className="font-medium text-primary">By: Amobear Team</span>
             )}
             {!isMyContext && (
               <span className="flex items-center gap-1">
@@ -660,7 +660,7 @@ export function ContextLibraryContent() {
             {context.focusAreas.map((focus) => (
               <Badge
                 key={focus}
-                className={cn("text-xs", focusColors[focus] || "bg-slate-100 text-slate-700")}
+                className={cn("text-xs", focusColors[focus] || "border border-border bg-muted text-muted-foreground")}
               >
                 {focus}
               </Badge>
@@ -680,7 +680,7 @@ export function ContextLibraryContent() {
 
           {/* Description */}
           {context.description && (
-            <p className="text-sm text-slate-600 line-clamp-2 mb-4">
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
               {context.description}
             </p>
           )}
@@ -831,7 +831,7 @@ export function ContextLibraryContent() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Pending toggle for admin */}
               {activeTab === "community" && isAdmin && stats && stats.communityPending > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-foreground">
                   <Switch
                     id="show-pending"
                     checked={showPending}
@@ -934,13 +934,13 @@ export function ContextLibraryContent() {
 
       {/* Preview Dialog */}
       <Dialog open={!!previewContext} onOpenChange={() => setPreviewContext(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden border border-border bg-background text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
               <span className="text-xl">{previewContext?.icon}</span>
               {previewContext?.name}
               {previewContext?.isSystemTemplate && (
-                <Badge className="bg-blue-100 text-blue-700 text-xs ml-2">
+                <Badge className="ml-2 border border-primary/20 bg-primary/10 text-xs text-primary">
                   <Shield className="h-3 w-3 mr-1" />
                   Official
                 </Badge>
@@ -952,7 +952,7 @@ export function ContextLibraryContent() {
               <div className="space-y-6 py-4">
                 {/* Author & Rating */}
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-slate-600">
+                  <span className="text-sm text-muted-foreground">
                     {previewContext.isSystemTemplate 
                       ? "By: Amobear Team" 
                       : `By: ${previewContext.sharedByEmail || "You"}`}
@@ -965,11 +965,11 @@ export function ContextLibraryContent() {
                           "h-4 w-4",
                           i < Math.floor(previewContext.rating)
                             ? "fill-amber-400 text-amber-400"
-                            : "text-slate-300"
+                            : "text-muted-foreground"
                         )}
                       />
                     ))}
-                    <span className="text-sm text-slate-500 ml-1">
+                    <span className="ml-1 text-sm text-muted-foreground">
                       ({previewContext.reviewCount || 0} reviews)
                     </span>
                   </div>
@@ -978,24 +978,24 @@ export function ContextLibraryContent() {
                 {/* Description */}
                 {previewContext.description && (
                   <div>
-                    <h4 className="font-medium text-slate-900 mb-2">Mô tả</h4>
-                    <p className="text-sm text-slate-600">{previewContext.description}</p>
+                    <h4 className="mb-2 font-medium text-foreground">Mô tả</h4>
+                    <p className="text-sm text-muted-foreground">{previewContext.description}</p>
                   </div>
                 )}
 
                 {/* Scope */}
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-2">Scope</h4>
-                  <div className="space-y-2 text-sm text-slate-600">
+                  <h4 className="mb-2 font-medium text-foreground">Scope</h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span>Focus Areas:</span>
                       {previewContext.focusAreas.length > 0 ? previewContext.focusAreas.map((f) => (
-                        <Badge key={f} className={cn("text-xs", focusColors[f] || "bg-slate-100 text-slate-700")}>
+                        <Badge key={f} className={cn("text-xs", focusColors[f] || "border border-border bg-muted text-muted-foreground")}>
                           {f}
                         </Badge>
-                      )) : <span className="text-slate-400 italic">Không giới hạn</span>}
+                      )) : <span className="text-muted-foreground italic">Không giới hạn</span>}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-foreground">
                       <span>Default Model:</span>
                       <Badge variant="outline">
                         {providerConfig[previewContext.preferredProvider as keyof typeof providerConfig]?.label || previewContext.preferredProvider}
@@ -1012,42 +1012,42 @@ export function ContextLibraryContent() {
 
                 {/* Pinned Metrics */}
                 <div>
-                  <h4 className="font-medium text-slate-900 mb-2">
+                  <h4 className="mb-2 font-medium text-foreground">
                     <Pin className="h-4 w-4 inline mr-1" />
                     Pinned Metrics ({isLoadingPreview ? "..." : previewMetrics.length})
                   </h4>
                   {isLoadingPreview ? (
                     <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
                   ) : previewMetrics.length > 0 ? (
                     <div className="space-y-2">
                       {previewMetrics.map((metric) => (
                         <div
                           key={metric.id}
-                          className="text-sm bg-slate-50 rounded-lg p-2"
+                          className="rounded-lg border border-border bg-muted/30 p-2 text-sm"
                         >
-                          <span className="font-medium text-slate-700">
+                          <span className="font-medium text-foreground">
                             {metric.metricName}
                           </span>
-                          <span className="text-slate-500 ml-2">
+                          <span className="ml-2 text-muted-foreground">
                             = {metric.metricFormula}
                           </span>
                           {metric.description && (
-                            <p className="text-xs text-slate-400 mt-1">{metric.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{metric.description}</p>
                           )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-400 italic">Không có metrics được pin sẵn</p>
+                    <p className="text-sm text-muted-foreground italic">Không có metrics được pin sẵn</p>
                   )}
                 </div>
 
                 {/* App IDs */}
                 {previewContext.appIds.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-slate-900 mb-2">
+                    <h4 className="mb-2 font-medium text-foreground">
                       <BookOpen className="h-4 w-4 inline mr-1" />
                       App IDs ({previewContext.appIds.length})
                     </h4>
@@ -1063,7 +1063,7 @@ export function ContextLibraryContent() {
               </div>
             </ScrollArea>
           )}
-          <DialogFooter className="border-t pt-4">
+          <DialogFooter className="shrink-0 border-t border-border bg-background/95 pt-4">
             {previewContext && canEdit(previewContext) && (
               <Button variant="outline" onClick={() => {
                 handleEdit(previewContext)
@@ -1108,7 +1108,7 @@ export function ContextLibraryContent() {
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!contextToDelete} onOpenChange={(open) => !open && setContextToDelete(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="border border-border bg-background text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle>Xác nhận xóa</DialogTitle>
             <DialogDescription>
@@ -1142,16 +1142,16 @@ export function ContextLibraryContent() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden border border-white/10 bg-slate-950/95 text-slate-100 shadow-[0_24px_80px_rgba(15,23,42,0.55)] backdrop-blur-xl">
-          <DialogHeader className="shrink-0 border-b border-white/10 bg-gradient-to-r from-slate-950 via-slate-950 to-slate-900/60 pb-4">
-            <DialogTitle className="text-xl font-semibold tracking-tight text-slate-50">
+        <DialogContent className="flex max-h-[90vh] max-w-xl flex-col overflow-hidden border border-border bg-background text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+          <DialogHeader className="shrink-0 border-b border-border bg-gradient-to-r from-background via-background to-muted/40 pb-4">
+            <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
               {editingTemplate 
                 ? `Chỉnh sửa: ${editingTemplate.name}`
                 : activeTab === "official" 
                   ? "Tạo Official Template" 
                   : "Tạo Context Template"}
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               {activeTab === "official" 
                 ? "Official template sẽ hiển thị cho tất cả người dùng"
                 : "Template sẽ được gửi cho admin duyệt trước khi hiển thị"}
@@ -1162,52 +1162,52 @@ export function ContextLibraryContent() {
           <div className="space-y-4 pr-3">
             {/* System Context Key - only for creating Official templates */}
             {activeTab === "official" && !editingTemplate && isSuperAdmin && (
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                <Label className="text-slate-200">System Context Key *</Label>
+              <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                <Label className="text-foreground">System Context Key *</Label>
                 <Input
                   placeholder="vd: game_analytics_starter"
                   value={formData.systemContextKey}
                   onChange={(e) => setFormData(prev => ({ ...prev, systemContextKey: e.target.value }))}
-                  className="border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                  className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
                 />
-                <p className="text-xs text-slate-400">Key duy nhất để định danh template, không có khoảng trắng</p>
+                <p className="text-xs text-muted-foreground">Key duy nhất để định danh template, không có khoảng trắng</p>
               </div>
             )}
 
             {/* Name */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <Label className="text-slate-200">Tên template *</Label>
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <Label className="text-foreground">Tên template *</Label>
               <Input
                 placeholder="vd: Game Analytics Starter"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
               />
             </div>
 
             {/* Description */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <Label className="text-slate-200">Mô tả</Label>
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <Label className="text-foreground">Mô tả</Label>
               <Textarea
                 placeholder="Mô tả ngắn về template này..."
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
               />
             </div>
 
             {/* Icon & Color */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                <Label className="text-slate-200">Icon</Label>
+              <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                <Label className="text-foreground">Icon</Label>
                 <div className="flex flex-wrap gap-2">
                   {ICON_OPTIONS.map((icon) => (
                     <button
                       key={icon}
                       type="button"
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-900/70 text-xl text-slate-100 transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-slate-800/90",
+                        "flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-xl text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:bg-muted/90",
                         formData.icon === icon ? "border-cyan-400/60 bg-cyan-500/15 ring-2 ring-cyan-400/25" : ""
                       )}
                       onClick={() => setFormData(prev => ({ ...prev, icon }))}
@@ -1217,16 +1217,16 @@ export function ContextLibraryContent() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                <Label className="text-slate-200">Màu sắc</Label>
+              <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                <Label className="text-foreground">Màu sắc</Label>
                 <div className="flex flex-wrap gap-2">
                   {COLOR_OPTIONS.map((color) => (
                     <button
                       key={color}
                       type="button"
                       className={cn(
-                        "h-8 w-8 rounded-full border border-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:scale-105",
-                        formData.color === color ? "scale-110 border-white/80 ring-2 ring-white/20" : "opacity-80"
+                        "h-8 w-8 rounded-full border border-border transition-all duration-200 hover:-translate-y-0.5 hover:scale-105",
+                        formData.color === color ? "scale-110 border-border ring-2 ring-ring/20" : "opacity-80"
                       )}
                       style={{ backgroundColor: color }}
                       onClick={() => setFormData(prev => ({ ...prev, color }))}
@@ -1237,9 +1237,9 @@ export function ContextLibraryContent() {
             </div>
 
             {/* Focus Areas */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <Label className="text-slate-200">Focus Areas (lĩnh vực tập trung)</Label>
-              <p className="text-xs text-slate-400">Chọn các lĩnh vực mà context này tập trung phân tích</p>
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <Label className="text-foreground">Focus Areas (lĩnh vực tập trung)</Label>
+              <p className="text-xs text-muted-foreground">Chọn các lĩnh vực mà context này tập trung phân tích</p>
               <div className="flex flex-wrap gap-2">
                 {FOCUS_OPTIONS.map((focus) => (
                   <Badge
@@ -1248,7 +1248,7 @@ export function ContextLibraryContent() {
                       "cursor-pointer border px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-[1px]",
                       formData.focusAreas.includes(focus)
                         ? focusColors[focus]
-                        : "border-white/10 bg-slate-900/70 text-slate-300 hover:border-white/20 hover:bg-slate-800"
+                        : "border-border bg-background text-muted-foreground hover:border-border hover:bg-muted"
                     )}
                     onClick={() => toggleFocusArea(focus)}
                   >
@@ -1262,11 +1262,11 @@ export function ContextLibraryContent() {
             </div>
 
             {/* Pinned Metrics — list trong vùng scroll cố định, không tràn ra ngoài */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-slate-900/60 p-3">
-              <Label className="text-slate-200">Pinned Metrics (metrics gắn với context)</Label>
-              <p className="text-xs text-slate-400">Các metric sẽ được inject vào prompt khi dùng context này</p>
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <Label className="text-foreground">Pinned Metrics (metrics gắn với context)</Label>
+              <p className="text-xs text-muted-foreground">Các metric sẽ được inject vào prompt khi dùng context này</p>
               <div className="flex flex-wrap gap-2 mb-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => addPinnedMetric()} className="border-white/10 bg-slate-900/70 text-slate-200 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white">
+                <Button type="button" variant="outline" size="sm" onClick={() => addPinnedMetric()} className="border-border bg-background text-foreground hover:border-cyan-400/40 hover:bg-muted hover:text-foreground">
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Thêm thủ công
                 </Button>
@@ -1277,7 +1277,7 @@ export function ContextLibraryContent() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="w-[240px] justify-between border-white/10 bg-slate-900/70 text-slate-200 hover:border-cyan-400/40 hover:bg-slate-800 hover:text-white"
+                        className="w-[240px] justify-between border-border bg-background text-foreground hover:border-cyan-400/40 hover:bg-muted hover:text-foreground"
                         disabled={isLoadingCatalog || metricsCatalog.length === 0}
                       >
                         {isLoadingCatalog ? "Đang tải catalog..." : "Thêm từ Metrics Catalog"}
@@ -1285,20 +1285,20 @@ export function ContextLibraryContent() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="w-[360px] overflow-hidden border border-white/10 bg-slate-950 p-0 text-slate-100 shadow-[0_20px_60px_rgba(15,23,42,0.55)]"
+                      className="w-[360px] overflow-hidden border border-border bg-background p-0 text-foreground shadow-[0_20px_60px_rgba(15,23,42,0.18)]"
                       align="start"
                       onWheel={(e) => e.stopPropagation()}
                     >
-                      <Command className="flex max-h-[320px] flex-col rounded-none border-0 bg-slate-950 shadow-none">
-                        <CommandInput className="h-10 border-0 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0" placeholder="Tìm theo tên hoặc công thức..." />
-                        <CommandList className="min-h-0 max-h-[260px] overscroll-contain bg-slate-950">
-                          <CommandEmpty className="py-6 text-sm text-slate-400">Không tìm thấy metric nào.</CommandEmpty>
-                          <CommandGroup heading="Chọn metric" className="text-slate-400">
+                      <Command className="flex max-h-[320px] flex-col rounded-none border-0 bg-background shadow-none">
+                        <CommandInput className="h-10 border-0 bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-0" placeholder="Tìm theo tên hoặc công thức..." />
+                        <CommandList className="min-h-0 max-h-[260px] overscroll-contain bg-background">
+                          <CommandEmpty className="py-6 text-sm text-muted-foreground">Không tìm thấy metric nào.</CommandEmpty>
+                          <CommandGroup heading="Chọn metric" className="text-muted-foreground">
                             {metricsCatalog.map((m) => (
                               <CommandItem
                                 key={m.id}
                                 value={`${m.displayName} ${m.formula} ${m.metricKey} ${m.description ?? ""}`}
-                                className="text-slate-100 aria-selected:bg-cyan-500/15 aria-selected:text-slate-50"
+                                className="text-foreground aria-selected:bg-cyan-500/15 aria-selected:text-foreground"
                                 onSelect={() => {
                                   addPinnedMetric({
                                     metricName: m.displayName,
@@ -1322,37 +1322,37 @@ export function ContextLibraryContent() {
                   </Popover>
                 )}
               </div>
-              <div className="max-h-[280px] min-h-[80px] overflow-y-auto overflow-x-hidden rounded-xl border border-white/10 bg-slate-950/60 p-2">
+              <div className="max-h-[280px] min-h-[80px] overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-background/80 p-2">
                 <div className="space-y-2">
                   {formData.pinnedMetrics.length === 0 ? (
-                    <p className="py-2 text-sm italic text-slate-400">Chưa có metric nào. Thêm thủ công hoặc chọn từ Catalog.</p>
+                    <p className="py-2 text-sm italic text-muted-foreground">Chưa có metric nào. Thêm thủ công hoặc chọn từ Catalog.</p>
                   ) : (
                     formData.pinnedMetrics.map((pm, index) => (
-                      <div key={index} className="flex shrink-0 items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2">
+                      <div key={index} className="flex shrink-0 items-start gap-2 rounded-xl border border-border bg-muted/30 p-2">
                         <div className="flex-1 grid grid-cols-2 gap-2 min-w-0">
                           <Input
                             placeholder="Tên metric"
                             value={pm.metricName}
                             onChange={(e) => updatePinnedMetric(index, "metricName", e.target.value)}
-                            className="h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                            className="h-8 border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
                           />
                           <Input
                             placeholder="Công thức"
                             value={pm.metricFormula}
                             onChange={(e) => updatePinnedMetric(index, "metricFormula", e.target.value)}
-                            className="h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                            className="h-8 border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
                           />
                           <Input
                             placeholder="Mô tả (tùy chọn)"
                             value={pm.description ?? ""}
                             onChange={(e) => updatePinnedMetric(index, "description", e.target.value)}
-                            className="col-span-2 h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                            className="col-span-2 h-8 border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
                           />
                           <Input
                             placeholder="Source table (tùy chọn)"
                             value={pm.sourceTable ?? ""}
                             onChange={(e) => updatePinnedMetric(index, "sourceTable", e.target.value)}
-                            className="col-span-2 h-8 border-slate-700/80 bg-slate-900/80 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500/30"
+                            className="col-span-2 h-8 border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-cyan-500/30"
                           />
                         </div>
                         <Button
@@ -1372,13 +1372,13 @@ export function ContextLibraryContent() {
             </div>
 
             {/* Provider */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <Label className="text-slate-200">Default AI Provider</Label>
+            <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+              <Label className="text-foreground">Default AI Provider</Label>
               <Select 
                 value={formData.preferredProvider} 
                 onValueChange={(v) => setFormData(prev => ({ ...prev, preferredProvider: v }))}
               >
-                <SelectTrigger className="border-slate-700/80 bg-slate-900/80 text-slate-100">
+                <SelectTrigger className="border-border bg-background text-foreground">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1391,10 +1391,10 @@ export function ContextLibraryContent() {
 
             {/* Include Data Context - only for Official templates */}
             {(activeTab === "official" || editingTemplate?.isSystemTemplate) && isSuperAdmin && (
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 p-3">
                 <div>
-                  <Label className="text-slate-200">Bao gồm System Data Context</Label>
-                  <p className="text-xs text-slate-400">Inject toàn bộ cấu trúc data hệ thống vào prompt</p>
+                  <Label className="text-foreground">Bao gồm System Data Context</Label>
+                  <p className="text-xs text-muted-foreground">Inject toàn bộ cấu trúc data hệ thống vào prompt</p>
                 </div>
                 <Switch
                   checked={formData.includeDataContext}
@@ -1405,8 +1405,8 @@ export function ContextLibraryContent() {
           </div>
           </ScrollArea>
 
-          <DialogFooter className="shrink-0 border-t border-white/10 bg-slate-950/80 pt-4 mt-0">
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="border-white/10 bg-slate-900/70 text-slate-200 hover:border-white/20 hover:bg-slate-800 hover:text-white">
+          <DialogFooter className="shrink-0 border-t border-border bg-background/95 pt-4 mt-0">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="border-border bg-background text-foreground hover:border-border hover:bg-muted hover:text-foreground">
               Hủy
             </Button>
             <Button onClick={handleSaveTemplate} disabled={isSaving} className="bg-cyan-500 text-slate-950 hover:bg-cyan-400">
