@@ -542,39 +542,37 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
 
     return (
         <div className="flex flex-col gap-6 max-w-4xl">
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="rounded-xl border border-border/70 bg-card/90 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-sky-50">
-                            <CloudDownload className="w-5 h-5 text-sky-600" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10">
+                            <CloudDownload className="w-5 h-5 text-sky-600 dark:text-sky-300" />
                         </div>
                         <div>
-                            <h3 className="text-base font-semibold text-slate-900">Qonversion (dashboard export)</h3>
-                            <p className="text-sm text-slate-500">
+                            <h3 className="text-base font-semibold text-foreground">Qonversion (dashboard export)</h3>
+                            <p className="text-sm text-muted-foreground">
                                 Daily CSV from dash.qonversion.io — org cookie in Data Accounts; per-app project key in Qonversion API (this app) below
                             </p>
                         </div>
                     </div>
                 </div>
                 <div className="p-6">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-2">
                         <div className="flex items-start justify-between gap-4">
                             <div className="space-y-1">
-                                <Label htmlFor="app-qon-crawler" className="text-sm font-medium text-slate-700">
+                                <Label htmlFor="app-qon-crawler" className="text-sm font-medium text-foreground">
                                     Enable web crawler sync for this app
                                 </Label>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-muted-foreground">
                                     When on, the job includes this app if <span className="font-mono text-[11px]">projectKey</span> is set in Qonversion API (this app). Dim sync may set{" "}
                                     <span className="font-mono text-[11px]">qon_enable</span> in StarRocks for BI.
                                 </p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
                                 {qonCrawlerSaving ? (
-                                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                 ) : (
-                                    <span
-                                        className={`text-sm font-medium ${qonCrawlerEnabled ? "text-green-700" : "text-slate-500"}`}
-                                    >
+                                    <span className={`text-sm font-medium ${qonCrawlerEnabled ? "text-emerald-600 dark:text-emerald-300" : "text-muted-foreground"}`}>
                                         {qonCrawlerEnabled ? "Enabled" : "Disabled"}
                                     </span>
                                 )}
@@ -590,33 +588,33 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="rounded-xl border border-border/70 bg-card/90 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-50">
-                            <KeyRound className="w-5 h-5 text-emerald-700" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                            <KeyRound className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
                         </div>
                         <div>
-                            <h3 className="text-base font-semibold text-slate-900">Qonversion API (this app)</h3>
-                            <p className="text-sm text-slate-500">
+                            <h3 className="text-base font-semibold text-foreground">Qonversion API (this app)</h3>
+                            <p className="text-sm text-muted-foreground">
                                 Project key, API key, and secret are per app in Qonversion — stored only on this Nexus app row
                             </p>
                         </div>
                     </div>
                     {qonApiConfigured ? (
-                        <Badge className="bg-green-100 text-green-700 border-0 gap-1.5">
+                        <Badge className="border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Keys set
                         </Badge>
                     ) : (
-                        <Badge variant="outline" className="bg-slate-50 text-slate-500 gap-1.5">
+                        <Badge variant="outline" className="gap-1.5 border-border/70 bg-muted/40 text-foreground">
                             <XCircle className="w-3.5 h-3.5" />
                             Not set
                         </Badge>
                     )}
                 </div>
                 <div className="p-6 flex flex-col gap-4">
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                         Data account &quot;Qonversion&quot; holds the dashboard cookie for the web crawler. Use this section for REST/SDK credentials that differ per app.
                     </p>
                     <div className="grid gap-4 sm:grid-cols-1">
@@ -669,7 +667,7 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                                 />
                                 <button
                                     type="button"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     onClick={() => setShowQonApiSecret((v) => !v)}
                                     aria-label={showQonApiSecret ? "Hide secret" : "Show secret"}
                                 >
@@ -701,34 +699,34 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="rounded-xl border border-border/70 bg-card/90 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-indigo-50">
-                            <Activity className="w-5 h-5 text-indigo-600" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/10">
+                            <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
                         </div>
                         <div>
-                            <h3 className="text-base font-semibold text-slate-900">AppMetrica (StarRocks dim)</h3>
-                            <p className="text-sm text-slate-500">
+                            <h3 className="text-base font-semibold text-foreground">AppMetrica (StarRocks dim)</h3>
+                            <p className="text-sm text-muted-foreground">
                                 Maps this AdMob app to AppMetrica&apos;s <span className="font-mono text-[11px]">application_id</span> on{" "}
                                 <span className="font-mono text-[11px]">silver.dim_app_identifiers</span> (AI Insight, game KPI, cohorts)
                             </p>
                         </div>
                     </div>
                     {appmetricaInput.trim() ? (
-                        <Badge className="bg-green-100 text-green-700 border-0 gap-1.5">
+                        <Badge className="border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             Set
                         </Badge>
                     ) : (
-                        <Badge variant="outline" className="bg-slate-50 text-slate-500 gap-1.5">
+                        <Badge variant="outline" className="gap-1.5 border-border/70 bg-muted/40 text-foreground">
                             <XCircle className="w-3.5 h-3.5" />
                             Not set
                         </Badge>
                     )}
                 </div>
                 <div className="p-6 flex flex-col gap-4">
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                         Numeric AppMetrica application id — stored on this app row, pushed to <span className="font-mono text-[11px]">silver.dim_app_identifiers</span> on
                         save (dim sync). This value wins over auto-mapping from package; if you clear it, existing dim values are kept on the next sync (same as Adjust id).
                     </p>
@@ -773,38 +771,36 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="rounded-xl border border-border/70 bg-card/90 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-violet-50">
-                            <Bell className="w-5 h-5 text-violet-600" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10">
+                            <Bell className="w-5 h-5 text-violet-600 dark:text-violet-300" />
                         </div>
                         <div>
-                            <h3 className="text-base font-semibold text-slate-900">Alert rules</h3>
-                            <p className="text-sm text-slate-500">
+                            <h3 className="text-base font-semibold text-foreground">Alert rules</h3>
+                            <p className="text-sm text-muted-foreground">
                                 When disabled, scheduled alert evaluation skips this app when loading metrics
                             </p>
                         </div>
                     </div>
                 </div>
                 <div className="p-6">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-2">
                         <div className="flex items-start justify-between gap-4">
                             <div className="space-y-1">
-                                <Label htmlFor="app-alert-status" className="text-sm font-medium text-slate-700">
+                                <Label htmlFor="app-alert-status" className="text-sm font-medium text-foreground">
                                     Include this app in alert rule evaluation
                                 </Label>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-xs text-muted-foreground">
                                     Default is off for new apps. Turn on only for apps you want monitored by alert rules.
                                 </p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
                                 {alertStatusSaving ? (
-                                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                 ) : (
-                                    <span
-                                        className={`text-sm font-medium ${alertRulesEnabled ? "text-green-700" : "text-slate-500"}`}
-                                    >
+                                    <span className={`text-sm font-medium ${alertRulesEnabled ? "text-emerald-600 dark:text-emerald-300" : "text-muted-foreground"}`}>
                                         {alertRulesEnabled ? "Enabled" : "Disabled"}
                                     </span>
                                 )}
@@ -820,27 +816,27 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                 </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="rounded-xl border border-border/70 bg-card/90 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-orange-50">
-                            <Flame className="w-5 h-5 text-orange-500" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500/10">
+                            <Flame className="w-5 h-5 text-orange-500 dark:text-orange-300" />
                         </div>
                         <div>
-                            <h3 className="text-base font-semibold text-slate-900">Firebase Configuration</h3>
-                            <p className="text-sm text-slate-500">
+                            <h3 className="text-base font-semibold text-foreground">Firebase Configuration</h3>
+                            <p className="text-sm text-muted-foreground">
                                 Configure Firebase pipeline params for this app
                             </p>
                         </div>
                     </div>
                     <div>
                         {isConfigured ? (
-                            <Badge className="bg-green-100 text-green-700 border-0 gap-1.5">
+                            <Badge className="border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5" />
                                 Configured
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="bg-slate-50 text-slate-500 gap-1.5">
+                            <Badge variant="outline" className="gap-1.5 border-border/70 bg-muted/40 text-foreground">
                                 <XCircle className="w-3.5 h-3.5" />
                                 Not configured
                             </Badge>
@@ -850,15 +846,15 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
 
                 <div className="p-6 flex flex-col gap-4">
 
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-2">
                         <div className="flex items-start justify-between gap-4">
                             <div className="space-y-1">
-                                <Label htmlFor="firebase-enabled" className="text-sm font-medium text-slate-700">
+                                <Label htmlFor="firebase-enabled" className="text-sm font-medium text-foreground">
                                     Enable Firebase ingestion
                                 </Label>
                             </div>
                             <div className="flex items-center gap-3">
-                                <span className={`text-sm font-medium ${formState.enabled ? "text-green-700" : "text-slate-500"}`}>
+                                <span className={`text-sm font-medium ${formState.enabled ? "text-emerald-600 dark:text-emerald-300" : "text-muted-foreground"}`}>
                                     {formState.enabled ? "Enabled" : "Disabled"}
                                 </span>
                                 <Switch
@@ -871,7 +867,7 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="firebase-app-key" className="text-sm font-medium text-slate-700">
+                        <Label htmlFor="firebase-app-key" className="text-sm font-medium text-foreground">
                             Firebase app key
                         </Label>
                         <Input
@@ -885,7 +881,7 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between gap-3">
                             <div className="space-y-1">
-                                <Label htmlFor="firebase-service-account" className="text-sm font-medium text-slate-700">
+                                <Label htmlFor="firebase-service-account" className="text-sm font-medium text-foreground">
                                     Service account file
                                 </Label>
                             </div>
@@ -893,22 +889,22 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                                 <Badge
                                     variant="outline"
                                     className={formState.serviceAccountSource === "uploaded"
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : "bg-slate-50 text-slate-600 border-slate-200"}
+                                        ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                        : "border border-border/70 bg-muted/40 text-foreground"}
                                 >
                                     {formState.serviceAccountSource === "uploaded" ? "New file selected" : "Stored credential"}
                                 </Badge>
                             )}
                         </div>
 
-                        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/80 p-2 flex flex-col gap-3">
+                        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border/70 bg-muted/30 p-2">
                             <div className="flex items-start gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white border border-slate-200">
-                                    <Upload className="w-5 h-5 text-slate-500" />
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/70 bg-background">
+                                    <Upload className="w-5 h-5 text-muted-foreground" />
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium text-slate-800">Upload service account JSON</p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-sm font-medium text-foreground">Upload service account JSON</p>
+                                    <p className="text-xs text-muted-foreground">
                                         Accepts a standard Google service account file exported from Firebase or GCP.
                                     </p>
                                 </div>
@@ -923,24 +919,24 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                             />
 
                             {formState.serviceAccountJson && (
-                                <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3">
+                                <div className="flex items-start justify-between gap-3 rounded-lg border border-border/70 bg-background p-3">
                                     <div className="space-y-1">
-                                        <p className="text-sm font-medium text-slate-800">
+                                        <p className="text-sm font-medium text-foreground">
                                             {formState.serviceAccountFileName || "service-account.json"}
                                         </p>
-                                        <p className="text-xs text-slate-500">
+                                        <p className="text-xs text-muted-foreground">
                                             {formState.serviceAccountSource === "uploaded"
                                                 ? "This file will be saved when you click Save Firebase Config."
                                                 : "Loaded from the current firebase_params configuration."}
                                         </p>
                                         {serviceAccountProjectId && (
-                                            <p className="text-xs text-slate-500">
-                                                Project ID: <span className="font-medium text-slate-700">{serviceAccountProjectId}</span>
+                                            <p className="text-xs text-muted-foreground">
+                                                Project ID: <span className="font-medium text-foreground">{serviceAccountProjectId}</span>
                                             </p>
                                         )}
                                         {serviceAccountEmail && (
-                                            <p className="text-xs text-slate-500">
-                                                Client email: <span className="font-medium text-slate-700">{serviceAccountEmail}</span>
+                                            <p className="text-xs text-muted-foreground">
+                                                Client email: <span className="font-medium text-foreground">{serviceAccountEmail}</span>
                                             </p>
                                         )}
                                     </div>
@@ -960,10 +956,10 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                     </div>
 
                     {showValidation && !validation.valid && (
-                        <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-red-50 border border-red-100">
+                        <div className="flex flex-col gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3">
                             {validation.errors.map((err, i) => (
-                                <div key={i} className="flex items-start gap-2 text-sm text-red-700">
-                                    <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                                <div key={i} className="flex items-start gap-2 text-sm text-rose-800 dark:text-rose-200">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
                                     <span>{err}</span>
                                 </div>
                             ))}
@@ -971,19 +967,19 @@ export function AppSettingsTab({ app, onAppUpdated }: AppSettingsTabProps) {
                     )}
 
                     {showValidation && validation.valid && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-100 text-sm text-green-700">
-                            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
                             Firebase configuration is ready to save.
                         </div>
                     )}
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between border-t border-border/70 pt-2">
                         <div>
                             {isConfigured && (
                                 <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
                                     <Button
                                         variant="outline"
-                                        className="h-9 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                        className="h-9 gap-2 border-rose-500/20 text-rose-700 hover:bg-rose-500/10 hover:text-rose-800"
                                         onClick={() => setIsClearDialogOpen(true)}
                                         disabled={isClearing || isSaving}
                                     >

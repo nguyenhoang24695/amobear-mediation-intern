@@ -88,14 +88,14 @@ export function CommissionRevenueTab() {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         {canManage && (
           <Input
             placeholder="Username (email)..."
             value={usernameFilter}
             onChange={(e) => setUsernameFilter(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="max-w-xs"
+            className="w-full sm:w-64"
           />
         )}
         <Input
@@ -103,24 +103,24 @@ export function CommissionRevenueTab() {
           value={appIdFilter}
           onChange={(e) => setAppIdFilter(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          className="max-w-xs"
+          className="w-full sm:w-64"
         />
-        <div className="flex gap-2 items-center">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Input
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="w-40"
+            className="h-10 min-w-0 flex-1 sm:w-40"
           />
           <span className="text-slate-400 text-sm">→</span>
           <Input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="w-40"
+            className="h-10 min-w-0 flex-1 sm:w-40"
           />
         </div>
-        <Button variant="outline" onClick={handleSearch} className="gap-2 shrink-0">
+        <Button variant="outline" onClick={handleSearch} className="h-10 w-full gap-2 shrink-0 sm:w-auto">
           <Search className="h-4 w-4" />
           Search
         </Button>
@@ -128,7 +128,7 @@ export function CommissionRevenueTab() {
 
       {/* Summary cards */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4">
           <SummaryCard label="Total revenue" value={formatUsd(totalRevenue)} />
           <SummaryCard label="Total commission" value={formatUsd(totalCommission)} />
           <SummaryCard label="Rows" value={rows.length.toString()} />
@@ -147,7 +147,7 @@ export function CommissionRevenueTab() {
       <Card className="border-slate-200">
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 flex items-center justify-center gap-2 text-slate-500">
+            <div className="flex items-center justify-center gap-2 py-16 text-slate-500">
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading...
             </div>
@@ -157,7 +157,7 @@ export function CommissionRevenueTab() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[720px] lg:min-w-full">
                 <TableHeader>
                   <TableRow>
                     {canManage && <TableHead>Username</TableHead>}
@@ -172,11 +172,11 @@ export function CommissionRevenueTab() {
                   {rows.map((row, i) => (
                     <TableRow key={i}>
                       {canManage && (
-                        <TableCell className="font-mono text-xs">{row.username}</TableCell>
+                        <TableCell className="max-w-[180px] truncate font-mono text-xs">{row.username}</TableCell>
                       )}
                       <TableCell>
-                        <div className="font-medium text-sm">{row.appName}</div>
-                        <div className="text-xs text-slate-400 font-mono">{row.appId}</div>
+                        <div className="max-w-[240px] truncate text-sm font-medium">{row.appName}</div>
+                        <div className="max-w-[240px] truncate font-mono text-xs text-slate-400">{row.appId}</div>
                       </TableCell>
                       <TableCell className="tabular-nums">{row.month}</TableCell>
                       <TableCell className="text-right tabular-nums">

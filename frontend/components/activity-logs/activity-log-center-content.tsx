@@ -7,10 +7,12 @@ import {
   Activity,
   Check,
   ChevronsUpDown,
+  ChevronDown,
   Eye,
   RefreshCw,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -68,7 +70,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/shared/pagination";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/components/ui/use-mobile";
 import { ActivityLogDetailDialog } from "./activity-log-detail-dialog";
 
 const ALL_DOMAIN_OPTION = { value: "all", label: "All Domains" };
@@ -499,6 +503,7 @@ export function ActivityLogCenterContent() {
 function ActivityLogCenterBody() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   const filtersFromUrl = useMemo(
     () => ({
@@ -576,6 +581,7 @@ function ActivityLogCenterBody() {
     useState<ActivityLogDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -826,7 +832,7 @@ function ActivityLogCenterBody() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
         <Card className="border-border bg-muted/40">
           <CardContent className="p-4">
             <p className="text-sm font-medium text-muted-foreground">
@@ -896,162 +902,355 @@ function ActivityLogCenterBody() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-3 xl:grid-cols-[minmax(240px,1.4fr)_200px_220px_180px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                placeholder="Search summary, actor, or target..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  setCurrentPage(1);
-                }}
-              />
-            </div>
+          {isMobile ? (
+            <Collapsible open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+                        <span className="text-sm font-medium text-slate-900">
+                          Filters
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Search, domain, event type, status, and more
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-slate-500 transition-transform",
+                        mobileFiltersOpen ? "rotate-180" : "",
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="border-t border-slate-200 px-4 pb-4 pt-4">
+                  <div className="space-y-4">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(240px,1.4fr)_200px_220px_180px]">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          placeholder="Search summary, actor, or target..."
+                          className="pl-9"
+                          value={searchQuery}
+                          onChange={(event) => {
+                            setSearchQuery(event.target.value);
+                            setCurrentPage(1);
+                          }}
+                        />
+                      </div>
 
-            <Select
-              value={domainFilter}
-              onValueChange={(value) => {
-                setDomainFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Domain" />
-              </SelectTrigger>
-              <SelectContent>
-                {domainOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                      <Select
+                        value={domainFilter}
+                        onValueChange={(value) => {
+                          setDomainFilter(value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Domain" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {domainOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-            <EventTypeFilterCombobox
-              options={filteredEventTypes}
-              value={eventTypeFilter}
-              onChange={(value) => {
-                setEventTypeFilter(value);
-                setCurrentPage(1);
-              }}
-            />
+                      <EventTypeFilterCombobox
+                        options={filteredEventTypes}
+                        value={eventTypeFilter}
+                        onChange={(value) => {
+                          setEventTypeFilter(value);
+                          setCurrentPage(1);
+                        }}
+                      />
 
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                      <Select
+                        value={statusFilter}
+                        onValueChange={(value) => {
+                          setStatusFilter(value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8">
-            <Input
-              placeholder="Actor name"
-              value={actorFilter}
-              onChange={(event) => {
-                setActorFilter(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8">
+                      <Input
+                        placeholder="Actor name"
+                        value={actorFilter}
+                        onChange={(event) => {
+                          setActorFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
 
-            <Select
-              value={targetTypeFilter}
-              onValueChange={(value) => {
-                setTargetTypeFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Target Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {TARGET_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                      <Select
+                        value={targetTypeFilter}
+                        onValueChange={(value) => {
+                          setTargetTypeFilter(value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Target Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TARGET_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-            <Input
-              placeholder="Target ID"
-              value={targetIdFilter}
-              onChange={(event) => {
-                setTargetIdFilter(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
+                      <Input
+                        placeholder="Target ID"
+                        value={targetIdFilter}
+                        onChange={(event) => {
+                          setTargetIdFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
 
-            <Select
-              value={jobNameFilter}
-              onValueChange={(value) => {
-                setJobNameFilter(value);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Job Name" />
-              </SelectTrigger>
-              <SelectContent>
-                {JOB_NAME_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                      <Select
+                        value={jobNameFilter}
+                        onValueChange={(value) => {
+                          setJobNameFilter(value);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Job Name" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {JOB_NAME_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-            <Input
-              placeholder="App ID"
-              inputMode="numeric"
-              value={appIdFilter}
-              onChange={(event) => {
-                setAppIdFilter(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
+                      <Input
+                        placeholder="App ID"
+                        inputMode="numeric"
+                        value={appIdFilter}
+                        onChange={(event) => {
+                          setAppIdFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
 
-            <Input
-              placeholder="Mediation Group ID"
-              value={mediationGroupIdFilter}
-              onChange={(event) => {
-                setMediationGroupIdFilter(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
+                      <Input
+                        placeholder="Mediation Group ID"
+                        value={mediationGroupIdFilter}
+                        onChange={(event) => {
+                          setMediationGroupIdFilter(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
 
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(event) => {
-                setFromDate(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
+                      <Input
+                        type="date"
+                        value={fromDate}
+                        onChange={(event) => {
+                          setFromDate(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
 
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(event) => {
-                setToDate(event.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
+                      <Input
+                        type="date"
+                        value={toDate}
+                        onChange={(event) => {
+                          setToDate(event.target.value);
+                          setCurrentPage(1);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          ) : (
+            <>
+              <div className="grid gap-3 xl:grid-cols-[minmax(240px,1.4fr)_200px_220px_180px]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    placeholder="Search summary, actor, or target..."
+                    className="pl-9"
+                    value={searchQuery}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </div>
+
+                <Select
+                  value={domainFilter}
+                  onValueChange={(value) => {
+                    setDomainFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Domain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {domainOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <EventTypeFilterCombobox
+                  options={filteredEventTypes}
+                  value={eventTypeFilter}
+                  onChange={(value) => {
+                    setEventTypeFilter(value);
+                    setCurrentPage(1);
+                  }}
+                />
+
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8">
+                <Input
+                  placeholder="Actor name"
+                  value={actorFilter}
+                  onChange={(event) => {
+                    setActorFilter(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+
+                <Select
+                  value={targetTypeFilter}
+                  onValueChange={(value) => {
+                    setTargetTypeFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Target Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TARGET_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  placeholder="Target ID"
+                  value={targetIdFilter}
+                  onChange={(event) => {
+                    setTargetIdFilter(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+
+                <Select
+                  value={jobNameFilter}
+                  onValueChange={(value) => {
+                    setJobNameFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Job Name" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JOB_NAME_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  placeholder="App ID"
+                  inputMode="numeric"
+                  value={appIdFilter}
+                  onChange={(event) => {
+                    setAppIdFilter(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+
+                <Input
+                  placeholder="Mediation Group ID"
+                  value={mediationGroupIdFilter}
+                  onChange={(event) => {
+                    setMediationGroupIdFilter(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+
+                <Input
+                  type="date"
+                  value={fromDate}
+                  onChange={(event) => {
+                    setFromDate(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+
+                <Input
+                  type="date"
+                  value={toDate}
+                  onChange={(event) => {
+                    setToDate(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

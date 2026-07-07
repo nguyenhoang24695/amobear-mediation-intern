@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { format, formatDistanceToNow } from "date-fns"
-import { AlertCircle, GitCompareArrows, ImageIcon, Loader2, RotateCw, Search } from "lucide-react"
+import { AlertCircle, ChevronDown, GitCompareArrows, ImageIcon, Loader2, RotateCw, Search, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { admobMonitoringApi } from "@/lib/api/admob-monitoring"
 import { hasScreenFunction } from "@/lib/auth"
@@ -26,6 +26,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Pagination } from "@/components/shared/pagination"
 import { StringMultiSelectCombobox } from "@/components/shared/string-multi-select-combobox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useIsMobile } from "@/components/ui/use-mobile"
 import { cn } from "@/lib/utils"
 
 const RECOMPARE_TOOLTIP =
@@ -122,6 +124,7 @@ function renderPlatformBadge(platformValue: string) {
 
 export function AdmobMonitoringCompareTab() {
   const canRun = hasScreenFunction("s-monitoring-admob", "run")
+  const isMobile = useIsMobile()
 
   const [items, setItems] = useState<PerformanceSyncCompareItem[]>([])
   const [total, setTotal] = useState(0)
@@ -140,6 +143,7 @@ export function AdmobMonitoringCompareTab() {
   const [resyncing, setResyncing] = useState(false)
   const [recomparing, setRecomparing] = useState(false)
   const [selectedHashKeys, setSelectedHashKeys] = useState<Set<string>>(() => new Set())
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   const waitingItems = useMemo(
     () => items.filter((item) => item.status.toLowerCase() === "waiting"),
@@ -276,82 +280,129 @@ export function AdmobMonitoringCompareTab() {
     }
   }
 
+  const filtersContent = (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="space-y-1.5">
+        <Label htmlFor="start-date">Start date</Label>
+        <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="end-date">End date</Label>
+        <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="source-filter">Source</Label>
+        <StringMultiSelectCombobox
+          id="source-filter"
+          options={SOURCE_TABLE_FILTER_OPTIONS}
+          values={selectedSourceList}
+          onChange={(next) => setSelectedSourceTables(new Set(next))}
+          placeholder="Select sources"
+          searchPlaceholder="Search sources..."
+          emptyMessage="No sources found."
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Status</Label>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Platform</Label>
+        <Select value={platform} onValueChange={setPlatform}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PLATFORM_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="app-search">Search apps</Label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            id="app-search"
+            className="min-w-0"
+            value={appSearch}
+            onChange={(e) => setAppSearch(e.target.value)}
+            placeholder="Name, App ID, Store ID..."
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="self-start sm:self-auto"
+            onClick={applyFilters}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
-          <CardDescription>Filter by date, source table, status, platform, or app name/app id/app store id.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-6">
-            <div className="space-y-1.5">
-              <Label htmlFor="start-date">Start date</Label>
-              <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="end-date">End date</Label>
-              <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="source-filter">Source</Label>
-              <StringMultiSelectCombobox
-                id="source-filter"
-                options={SOURCE_TABLE_FILTER_OPTIONS}
-                values={selectedSourceList}
-                onChange={(next) => setSelectedSourceTables(new Set(next))}
-                placeholder="Select sources"
-                searchPlaceholder="Search sources..."
-                emptyMessage="No sources found."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Platform</Label>
-              <Select value={platform} onValueChange={setPlatform}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLATFORM_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="app-search">Search apps</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="app-search"
-                  value={appSearch}
-                  onChange={(e) => setAppSearch(e.target.value)}
-                  placeholder="Name, App ID, Store ID..."
-                />
-                <Button type="button" variant="outline" size="icon" onClick={applyFilters}>
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4 sm:space-y-6">
+      {isMobile ? (
+        <Collapsible open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+          <Card>
+            <CardHeader className="pb-3">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 text-left"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-base">Filters</CardTitle>
+                    </div>
+                    <CardDescription className="mt-1">
+                      Filter by date, source table, status, platform, or app name/app id/app store id.
+                    </CardDescription>
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                      mobileFiltersOpen ? "rotate-180" : "",
+                    )}
+                  />
+                </button>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                {filtersContent}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Filters</CardTitle>
+            <CardDescription>Filter by date, source table, status, platform, or app name/app id/app store id.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filtersContent}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         <CardHeader className="flex flex-col gap-3 border-b bg-muted/50 sm:flex-row sm:items-center sm:justify-between">
@@ -362,14 +413,15 @@ export function AdmobMonitoringCompareTab() {
             </CardDescription>
           </div>
           {selectedCount > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <span className="text-sm font-medium text-muted-foreground">{selectedCount} selected</span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex">
+                  <span className="flex w-full sm:w-auto">
                     <Button
                       type="button"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       onClick={() => void recompareSelected()}
                       disabled={!canRun || recomparing || resyncing}
                     >
@@ -388,9 +440,10 @@ export function AdmobMonitoringCompareTab() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex">
+                  <span className="flex w-full sm:w-auto">
                     <Button
                       type="button"
+                      className="w-full sm:w-auto"
                       onClick={() => void resyncSelected()}
                       disabled={!canRun || resyncing || recomparing}
                     >
@@ -412,7 +465,7 @@ export function AdmobMonitoringCompareTab() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-auto">
-            <Table>
+            <Table className="min-w-[1180px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">

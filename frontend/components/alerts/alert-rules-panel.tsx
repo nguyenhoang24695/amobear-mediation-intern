@@ -95,7 +95,7 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full px-4 sm:max-w-5xl sm:px-6">
+        <SheetContent side="right" className="w-full bg-background px-4 text-foreground sm:max-w-5xl sm:px-6">
           <SheetHeader>
             <SheetTitle>Alert Rules</SheetTitle>
             <SheetDescription>Manage alert rules and notification channels for the alert system.</SheetDescription>
@@ -120,15 +120,15 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
 
           <div className="mt-5 space-y-3 overflow-y-auto pb-4 pr-1">
             {loading ? (
-              <Card className="border-slate-200">
-                <CardContent className="py-12 text-center text-sm text-slate-500">
+              <Card className="border-border">
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
                   <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
                   Loading rules...
                 </CardContent>
               </Card>
             ) : (rules ?? []).length === 0 ? (
-              <Card className="border-slate-200">
-                <CardContent className="py-12 text-center text-sm text-slate-500">
+              <Card className="border-border">
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
                   No alert rules found.
                 </CardContent>
               </Card>
@@ -140,26 +140,26 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
                 const slackChannels = parseJsonArray(rule.slackChannels)
 
                 return (
-                  <Card key={rule.id} className="border-slate-200">
+                  <Card key={rule.id} className="border-border bg-card">
                     <CardContent className="py-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-slate-900">{rule.name}</p>
+                            <p className="text-sm font-semibold text-foreground">{rule.name}</p>
                             <Badge variant="outline">{rule.ruleType}</Badge>
                             <Badge variant="outline">{rule.severity}</Badge>
-                            <Badge className={rule.isEnabled ? "bg-green-100 text-green-700 border-0" : "bg-slate-100 text-slate-600 border-0"}>
+                            <Badge className={rule.isEnabled ? "border-0 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "border-0 bg-muted text-muted-foreground"}>
                               {rule.isEnabled ? "Enabled" : "Disabled"}
                             </Badge>
                           </div>
                           {rule.description ? (
-                            <p className="text-sm text-slate-600">{rule.description}</p>
+                            <p className="text-sm text-muted-foreground">{rule.description}</p>
                           ) : null}
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             Priority {rule.priority} • Cooldown {rule.cooldownMinutes}m • Window {rule.timeWindowHours}h
                           </p>
                           <div className="flex flex-wrap items-center gap-1">
-                            <span className="text-xs text-slate-500">Channels:</span>
+                            <span className="text-xs text-muted-foreground">Channels:</span>
                             {channels.length > 0 ? (
                               channels.map((channel) => (
                                 <Badge key={`${rule.id}-${channel}`} variant="outline" className="text-[11px]">
@@ -167,17 +167,17 @@ export function AlertRulesPanel({ open, onOpenChange }: AlertRulesPanelProps) {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-xs text-slate-500">None</span>
+                              <span className="text-xs text-muted-foreground">None</span>
                             )}
                           </div>
                           {telegramTopics.length > 0 ? (
-                            <p className="text-xs text-slate-500">Telegram: {telegramTopics.join(", ")}</p>
+                            <p className="text-xs text-muted-foreground">Telegram: {telegramTopics.join(", ")}</p>
                           ) : null}
                           {emailRecipients.length > 0 ? (
-                            <p className="text-xs text-slate-500">Email: {emailRecipients.join(", ")}</p>
+                            <p className="text-xs text-muted-foreground">Email: {emailRecipients.join(", ")}</p>
                           ) : null}
                           {slackChannels.length > 0 ? (
-                            <p className="text-xs text-slate-500">Slack: {slackChannels.join(", ")}</p>
+                            <p className="text-xs text-muted-foreground">Slack: {slackChannels.join(", ")}</p>
                           ) : null}
                         </div>
                         <div className="flex items-center gap-1">

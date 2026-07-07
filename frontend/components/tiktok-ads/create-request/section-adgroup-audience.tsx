@@ -359,15 +359,17 @@ export function AdGroupAudienceSection({
           </div>
         </div>
 
-        <div className="rounded-md border bg-muted/40 p-4">
+        <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 shadow-sm dark:border-slate-800/80 dark:bg-slate-950/30">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-sm font-semibold text-foreground">Audience controls</h3>
               <p className="text-xs text-muted-foreground">Locations are required and limit who can see the ad.</p>
             </div>
-            <Badge variant="outline">{targetingLoading ? "Loading TikTok options" : targetingOptions?.source ?? "fallback"}</Badge>
+            <Badge className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+              {targetingLoading ? "Loading TikTok options" : targetingOptions?.source ?? "fallback"}
+            </Badge>
           </div>
-          <div className="mb-4 rounded-md border bg-background p-3">
+          <div className="mb-4 rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20">
             <GeoCountryGroupManager
               groups={countryGroups}
               loading={countryGroupsLoading}
@@ -384,7 +386,7 @@ export function AdGroupAudienceSection({
               selectionDisabled={!hasSelectedAdAccount}
               selectionDisabledMessage="Select a TikTok ad account before choosing country groups."
             />
-            {countryGroupApplyMessage ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{countryGroupApplyMessage}</p> : null}
+            {countryGroupApplyMessage ? <p className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-200">{countryGroupApplyMessage}</p> : null}
           </div>
           <LocationTreeMultiSelect
             values={form.adGroup.locationIds}
@@ -395,7 +397,7 @@ export function AdGroupAudienceSection({
             disabled={targetingLoading}
             onValuesChange={(values) => onChange({ adGroup: { ...form.adGroup, locationIds: values, countryGroupIds: [] } })}
           />
-          {targetingOptions?.errorMessage ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{targetingOptions.errorMessage}</p> : null}
+          {targetingOptions?.errorMessage ? <p className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-200">{targetingOptions.errorMessage}</p> : null}
         </div>
 
         <div className="rounded-md border bg-card p-4 text-card-foreground">

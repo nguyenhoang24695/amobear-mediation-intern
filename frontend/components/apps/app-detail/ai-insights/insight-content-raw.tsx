@@ -70,32 +70,32 @@ export function InsightContentRaw({ content }: InsightContentRawProps) {
 
     // Horizontal rule
     if (line === "---") {
-      return <span className="text-slate-500">{line}</span>
+      return <span className="text-muted-foreground">{line}</span>
     }
 
     return line
   }
 
   return (
-    <Card className="bg-slate-900 border-slate-700 overflow-hidden">
+    <Card className="overflow-hidden border-border bg-card">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
             <Switch
               id="line-numbers"
               checked={showLineNumbers}
               onCheckedChange={setShowLineNumbers}
-              className="data-[state=checked]:bg-indigo-600"
+              className="data-[state=checked]:bg-primary"
             />
             <Label
               htmlFor="line-numbers"
-              className="text-xs text-slate-400 cursor-pointer"
+              className="cursor-pointer text-xs text-muted-foreground"
             >
               Line numbers
             </Label>
           </div>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {lines.length} lines
           </span>
         </div>
@@ -103,7 +103,7 @@ export function InsightContentRaw({ content }: InsightContentRawProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-700"
+          className="h-7 gap-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={copyToClipboard}
         >
           {copied ? (
@@ -121,22 +121,22 @@ export function InsightContentRaw({ content }: InsightContentRawProps) {
       </div>
 
       {/* Code Content */}
-      <div className="overflow-x-auto p-4 max-h-[600px] overflow-y-auto">
+      <div className="max-h-[480px] overflow-x-auto overflow-y-auto p-3 sm:max-h-[600px] sm:p-4">
         <pre className="font-mono text-sm leading-relaxed">
           {lines.map((line, index) => (
             <div
               key={index}
               className={cn(
-                "flex hover:bg-slate-800/50 rounded",
-                showLineNumbers ? "" : "pl-2"
+                "flex rounded hover:bg-muted/60",
+                showLineNumbers ? "" : "pl-2",
               )}
             >
               {showLineNumbers && (
-                <span className="w-12 pr-4 text-right text-slate-600 select-none flex-shrink-0">
+                <span className="w-10 flex-shrink-0 select-none pr-3 text-right text-muted-foreground sm:w-12 sm:pr-4">
                   {index + 1}
                 </span>
               )}
-              <span className="text-slate-300 whitespace-pre-wrap break-words flex-1">
+              <span className="flex-1 whitespace-pre-wrap break-words text-foreground">
                 {highlightLine(line) || "\u00A0"}
               </span>
             </div>

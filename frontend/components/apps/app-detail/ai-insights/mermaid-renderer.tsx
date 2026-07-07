@@ -78,13 +78,13 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
 
   if (error) {
     return (
-      <div className={cn("rounded-lg border border-amber-200 bg-amber-50 p-4", className)}>
+      <div className={cn("rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4", className)}>
         <div className="flex items-start gap-3">
-          <Code2 className="w-5 h-5 text-amber-600 mt-0.5" />
+          <Code2 className="mt-0.5 h-5 w-5 text-amber-600" />
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800">Diagram could not be rendered</p>
             <p className="text-xs text-amber-600 mt-1">{error}</p>
-            <pre className="mt-3 p-3 bg-amber-100 rounded text-xs font-mono text-amber-900 overflow-auto max-h-64 whitespace-pre-wrap break-words">
+            <pre className="mt-3 max-h-64 overflow-auto rounded bg-amber-100 p-3 text-xs font-mono text-amber-900 whitespace-pre-wrap break-words">
               {normalizedChart}
             </pre>
           </div>
@@ -95,29 +95,29 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
 
   if (!svg) {
     return (
-      <div className={cn("rounded-lg border border-slate-200 bg-slate-50 p-8 animate-pulse", className)}>
+      <div className={cn("rounded-lg border border-border bg-muted/40 p-4 animate-pulse sm:p-8", className)}>
         <div className="flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className={cn("rounded-lg border border-slate-200 bg-white overflow-hidden", className)}>
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>
       {/* Rendered Diagram */}
       <div
         ref={containerRef}
-        className="p-4 flex items-center justify-center overflow-x-auto"
+        className="flex items-center justify-center overflow-x-auto p-3 sm:p-4"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
 
       {/* View Source Toggle */}
-      <div className="border-t border-slate-100 bg-slate-50 px-3 py-2">
+      <div className="border-t border-border bg-muted/40 px-3 py-2">
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 text-xs text-slate-500 hover:text-slate-700 gap-1.5"
+          className="h-7 gap-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={() => setShowSource(!showSource)}
         >
           <Code2 className="w-3.5 h-3.5" />
@@ -130,7 +130,7 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
         </Button>
 
         {showSource && (
-          <pre className="mt-2 p-3 bg-slate-900 rounded text-xs font-mono text-slate-300 overflow-x-auto">
+          <pre className="mt-2 overflow-x-auto rounded bg-muted p-3 text-xs font-mono text-foreground">
             {chart}
           </pre>
         )}

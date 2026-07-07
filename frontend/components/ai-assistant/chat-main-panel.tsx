@@ -517,7 +517,7 @@ export function ChatMainPanel({
   const displayModelName = currentModelData?.displayName || effectiveModelId || "Select model"
 
   return (
-    <div className={cn("flex-1 flex flex-col bg-slate-50 transition-all overflow-hidden")}>
+    <div className={cn("flex min-w-0 flex-1 flex-col overflow-hidden bg-background transition-all")}>
       {/* Messages Area */}
       <ScrollArea className="flex-1 min-h-0 p-6">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -535,20 +535,20 @@ export function ChatMainPanel({
 
       {/* Sending status — shown only when no plan-card / thinking panel is already visible */}
       {sending && !messages.some(m => m.messageType === "plan-card" || m.messageType === "thinking") && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border-t border-blue-100 text-sm text-blue-800">
+        <div className="flex items-center gap-2 border-t border-primary/20 bg-primary/10 px-4 py-2.5 text-sm text-primary">
           <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
           <span className="truncate">{sendingSteps[sendingStepIndex]}</span>
         </div>
       )}
 
       {/* Input Area */}
-      <div className="border-t border-slate-200 bg-white p-4">
+      <div className="border-t border-border bg-card p-3 sm:p-4">
         <div className="max-w-4xl mx-auto">
           {/* Pasted images preview */}
           {pastedImages.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {pastedImages.map((img, i) => (
-                <div key={i} className="relative inline-block rounded border border-slate-200 overflow-hidden bg-slate-50">
+                <div key={i} className="relative inline-block overflow-hidden rounded border border-border bg-muted/40">
                   <img src={`data:${img.mediaType};base64,${img.base64Data}`} alt="" className="h-14 w-14 object-cover" />
                   <button
                     type="button"
@@ -563,13 +563,13 @@ export function ChatMainPanel({
             </div>
           )}
           {currentProviderConfig && !providerHasUsableModels && (
-            <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
               <span>This provider currently has no usable models. Open AI Settings to refresh models or choose a new default model.</span>
             </div>
           )}
           {/* Text Input */}
-          <div className="relative border border-slate-200 rounded-lg bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+          <div className="relative rounded-lg border border-border bg-background focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
             <Textarea
               ref={textareaRef}
               value={inputValue}
@@ -582,7 +582,7 @@ export function ChatMainPanel({
             />
             <Button
               size="icon"
-              className="absolute right-2 bottom-2 h-8 w-8 bg-blue-600 hover:bg-blue-700"
+              className="absolute bottom-2 right-2 h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleSend}
               disabled={(!inputValue.trim() && pastedImages.length === 0) || (currentProviderConfig ? !providerHasUsableModels : false)}
             >
@@ -591,15 +591,15 @@ export function ChatMainPanel({
           </div>
 
           {/* Bottom toolbar */}
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-8 text-slate-600">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground">
                 <Paperclip className="h-4 w-4 mr-1" />
                 SQL
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 text-slate-600">
+                  <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-foreground">
                     <ListFilter className="h-4 w-4 mr-1" />
                     Templates
                     <ChevronDown className="h-3 w-3 ml-1" />
@@ -613,7 +613,7 @@ export function ChatMainPanel({
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              <div className="h-4 w-px bg-slate-200 mx-1" />
+              <div className="mx-1 hidden h-4 w-px bg-border sm:block" />
               
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -623,7 +623,7 @@ export function ChatMainPanel({
                 />
                 <label
                   htmlFor="autoExplain"
-                  className="text-sm text-slate-600 cursor-pointer"
+                  className="cursor-pointer text-sm text-muted-foreground"
                 >
                   Auto-explain
                 </label>
@@ -652,23 +652,23 @@ export function ChatMainPanel({
                 </label>
               </div>
 
-              <div className="h-4 w-px bg-slate-200 mx-1" />
+              <div className="mx-1 hidden h-4 w-px bg-border sm:block" />
 
               {/* Model Selector */}
               <DropdownMenu open={modelDropdownOpen} onOpenChange={setModelDropdownOpen}>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-slate-600 px-2">
+                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground">
                     <div className={cn("w-2 h-2 rounded-full flex-shrink-0", PROVIDER_COLORS[selectedProviderKey] || "bg-gray-500")} />
                     <span className="font-medium text-sm">{displayProviderName}</span>
-                    <span className="text-slate-400 text-xs hidden sm:inline">
+                    <span className="hidden text-xs text-muted-foreground sm:inline">
                       {displayModelName}
                     </span>
-                    <ChevronDown className="h-3 w-3 text-slate-400" />
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="p-0" style={{ minWidth: 520 }}>
-                  <div className="px-3 py-2.5 border-b border-slate-100">
-                    <span className="text-sm font-semibold text-slate-700">Select AI Model</span>
+                  <div className="border-b border-border px-3 py-2.5">
+                    <span className="text-sm font-semibold text-foreground">Select AI Model</span>
                   </div>
                   <ModelSelectorDropdown
                     providerConfigs={providerConfigs}
@@ -679,7 +679,7 @@ export function ChatMainPanel({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <span className="text-xs text-slate-400">Ctrl + Enter to send</span>
+            <span className="text-xs text-muted-foreground">Ctrl + Enter to send</span>
           </div>
         </div>
       </div>

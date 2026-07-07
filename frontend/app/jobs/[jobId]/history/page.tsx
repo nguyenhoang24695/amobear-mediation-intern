@@ -10,7 +10,7 @@ export default async function JobHistoryPage({ params }: PageProps) {
   const { jobId } = await params
   return (
     <DashboardLayout>
-      <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading history...</div>}>
+      <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading history...</div>}>
         <JobHistoryContent jobId={jobId} />
       </Suspense>
     </DashboardLayout>

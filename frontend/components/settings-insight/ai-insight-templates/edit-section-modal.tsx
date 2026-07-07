@@ -137,7 +137,7 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="flex h-[min(92dvh,820px)] w-[min(96vw,1100px)] max-w-[min(96vw,1100px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,1100px)]"
+        className="flex h-[92dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 overflow-hidden p-0 sm:h-[min(92dvh,820px)] sm:w-[min(96vw,1100px)] sm:max-w-[min(96vw,1100px)]"
       >
         <DialogHeader className="shrink-0 border-b border-border px-6 py-4 pr-14 text-left">
           <DialogTitle>Section: {section?.title ?? ""}</DialogTitle>
@@ -146,7 +146,7 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
           </p>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border lg:grid-cols-2 lg:divide-x lg:divide-y-0">
           <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain p-4 sm:p-5">
             <div className="space-y-5 pb-2">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -301,11 +301,11 @@ export function EditSectionModal({ open, onOpenChange, section, onSave }: EditSe
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-4 py-3 sm:px-6">
-          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-4 py-3 sm:flex-row sm:flex-wrap sm:justify-end sm:px-6">
+          <Button variant="outline" type="button" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button className="bg-primary hover:bg-primary/90" type="button" onClick={handleSave}>
+          <Button className="w-full bg-primary hover:bg-primary/90 sm:w-auto" type="button" onClick={handleSave}>
             Lưu section
           </Button>
         </DialogFooter>

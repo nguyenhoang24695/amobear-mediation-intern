@@ -325,12 +325,12 @@ function TeamsGroupedTable({
           </div>
         </div>
       )}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
           onClick={onExpandAll}
-          className="text-xs"
+          className="shrink-0 text-xs"
         >
           <ChevronsUpDown className="w-3 h-3 mr-1" />
           Expand all
@@ -339,7 +339,7 @@ function TeamsGroupedTable({
           variant="outline"
           size="sm"
           onClick={onCollapseAll}
-          className="text-xs"
+          className="shrink-0 text-xs"
         >
           <ChevronsUpDown className="w-3 h-3 mr-1" />
           Collapse all
@@ -348,7 +348,7 @@ function TeamsGroupedTable({
       <Card className="border-border">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[760px]">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="w-10">
@@ -789,8 +789,8 @@ export function OrgTeamsTab({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-24 sm:pb-0">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-foreground">Teams</h2>
@@ -801,17 +801,17 @@ export function OrgTeamsTab({
           <p className="text-sm text-muted-foreground mt-0.5">Manage teams in this organization</p>
         </div>
         {canManage && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center">
             <Button
               variant="outline"
-              className="gap-2 bg-background"
+              className="w-full gap-2 bg-background sm:w-auto"
               onClick={() => setCreateGroupOpen(true)}
             >
               <Plus className="w-4 h-4" />
               Create Group
             </Button>
             <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+              className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="w-4 h-4" />
@@ -821,8 +821,8 @@ export function OrgTeamsTab({
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search teams..."
@@ -837,7 +837,7 @@ export function OrgTeamsTab({
       </div>
 
       {!loading && !error && (
-        <div className="flex flex-wrap items-center gap-6 text-sm">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
           <span className="text-muted-foreground">
             Total:{" "}
             <span className="font-semibold text-foreground">{teams.length}</span>

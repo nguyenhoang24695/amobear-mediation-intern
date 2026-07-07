@@ -1,21 +1,39 @@
-"use client"
+"use client";
 
-import { useState, useMemo, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState, useMemo, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   MoreHorizontal,
   User,
@@ -37,14 +55,14 @@ import {
   Database,
   Crown,
   LogOut,
-} from "lucide-react"
-import Link from "next/link"
-import { useApi } from "@/hooks/use-api"
-import { teamMembersApi } from "@/lib/api/services"
-import { ManagePermissionsModal } from "./manage-permissions-modal"
-import { AbUserAppMappingModal } from "./ab-user-app-mapping-modal"
-import { getCurrentUser } from "@/lib/auth"
-import { canRemoveUserFromTeam } from "@/lib/organizations/team-member-permissions"
+} from "lucide-react";
+import Link from "next/link";
+import { useApi } from "@/hooks/use-api";
+import { teamMembersApi } from "@/lib/api/services";
+import { ManagePermissionsModal } from "./manage-permissions-modal";
+import { AbUserAppMappingModal } from "./ab-user-app-mapping-modal";
+import { getCurrentUser } from "@/lib/auth";
+import { canRemoveUserFromTeam } from "@/lib/organizations/team-member-permissions";
 import {
   Dialog,
   DialogContent,
@@ -52,7 +70,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,24 +80,24 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useToast } from "@/hooks/use-toast"
-import type { TeamMember } from "@/types/api"
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import type { TeamMember } from "@/types/api";
 
 interface UsersTableProps {
-  searchQuery: string
-  roleFilter: string
-  statusFilter: string
-  teamId: string
-  onInviteClick?: () => void
-  onTeamNameChange?: (name?: string) => void
+  searchQuery: string;
+  roleFilter: string;
+  statusFilter: string;
+  teamId: string;
+  onInviteClick?: () => void;
+  onTeamNameChange?: (name?: string) => void;
 }
 
 const roleColors = {
   admin: "bg-purple-100 text-purple-700",
   editor: "bg-blue-100 text-blue-700",
   viewer: "bg-slate-100 text-slate-700",
-}
+};
 
 const statusConfig = {
   active: { color: "bg-green-500", label: "Active" },
@@ -87,125 +105,180 @@ const statusConfig = {
   inactive: { color: "bg-slate-400", label: "Inactive" },
   locked: { color: "bg-orange-500", label: "Locked" },
   pending: { color: "bg-blue-500", label: "Pending" },
-}
+};
 
-type SortColumn = "name" | "role" | "teams" | "appAccess" | "metaAdAccounts" | "status" | "joinedAt" | null
-type SortDirection = "asc" | "desc"
+type SortColumn =
+  | "name"
+  | "role"
+  | "teams"
+  | "appAccess"
+  | "metaAdAccounts"
+  | "status"
+  | "joinedAt"
+  | null;
+type SortDirection = "asc" | "desc";
 
 function extractTeamActionError(err: unknown, fallback: string): string {
-  if (err instanceof Error && err.message.trim()) return err.message
-  const anyErr = err as { response?: { data?: { error?: { message?: string }; message?: string } }; message?: string }
+  if (err instanceof Error && err.message.trim()) return err.message;
+  const anyErr = err as {
+    response?: { data?: { error?: { message?: string }; message?: string } };
+    message?: string;
+  };
   return (
     anyErr?.response?.data?.error?.message ||
     anyErr?.response?.data?.message ||
     anyErr?.message ||
     fallback
-  )
+  );
 }
 
 function formatTeamActionFailures(
   failures: Array<{ userId: string; error?: string }>,
   userNameById: Map<string, string>,
 ): string {
-  if (failures.length === 0) return "An unknown error occurred."
+  if (failures.length === 0) return "An unknown error occurred.";
   if (failures.length === 1) {
-    const f = failures[0]
-    const name = userNameById.get(f.userId)
-    const detail = f.error?.trim() || "An unknown error occurred."
-    return name ? `${name}: ${detail}` : detail
+    const f = failures[0];
+    const name = userNameById.get(f.userId);
+    const detail = f.error?.trim() || "An unknown error occurred.";
+    return name ? `${name}: ${detail}` : detail;
   }
   return failures
     .map((f) => {
-      const name = userNameById.get(f.userId) ?? f.userId
-      const detail = f.error?.trim() || "Unknown error"
-      return `• ${name}: ${detail}`
+      const name = userNameById.get(f.userId) ?? f.userId;
+      const detail = f.error?.trim() || "Unknown error";
+      return `• ${name}: ${detail}`;
     })
-    .join("\n")
+    .join("\n");
 }
 
-export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onInviteClick, onTeamNameChange }: UsersTableProps) {
-  const currentUser = useMemo(() => getCurrentUser(), [])
-  const currentUserId = currentUser?.id
-  const canRemoveMembersFromTeam = teamId ? canRemoveUserFromTeam(teamId, currentUser) : false
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
-  const [sortColumn, setSortColumn] = useState<SortColumn>(null)
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
-  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false)
-  const [permissionsUserId, setPermissionsUserId] = useState<string | null>(null)
-  const [permissionsUserName, setPermissionsUserName] = useState<string>("")
-  const [permissionsUserRole, setPermissionsUserRole] = useState<"admin" | "editor" | "viewer">("viewer")
-  const [initialPermissions, setInitialPermissions] = useState<Record<string, string>>({})
-  const [mappingModalOpen, setMappingModalOpen] = useState(false)
-  const [mappingUserId, setMappingUserId] = useState<string | null>(null)
-  const [mappingUserName, setMappingUserName] = useState("")
-  const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] = useState(false)
-  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
-  const [usersToRemove, setUsersToRemove] = useState<string[]>([])
-  const [isLeaveAction, setIsLeaveAction] = useState(false)
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null)
-  const [removing, setRemoving] = useState(false)
-  const { toast } = useToast()
+export function UsersTable({
+  searchQuery,
+  roleFilter,
+  statusFilter,
+  teamId,
+  onInviteClick,
+  onTeamNameChange,
+}: UsersTableProps) {
+  const currentUser = useMemo(() => getCurrentUser(), []);
+  const currentUserId = currentUser?.id;
+  const canRemoveMembersFromTeam = teamId
+    ? canRemoveUserFromTeam(teamId, currentUser)
+    : false;
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
+  const [permissionsUserId, setPermissionsUserId] = useState<string | null>(
+    null,
+  );
+  const [permissionsUserName, setPermissionsUserName] = useState<string>("");
+  const [permissionsUserRole, setPermissionsUserRole] = useState<
+    "admin" | "editor" | "viewer"
+  >("viewer");
+  const [initialPermissions, setInitialPermissions] = useState<
+    Record<string, string>
+  >({});
+  const [mappingModalOpen, setMappingModalOpen] = useState(false);
+  const [mappingUserId, setMappingUserId] = useState<string | null>(null);
+  const [mappingUserName, setMappingUserName] = useState("");
+  const [selfPermissionWarningOpen, setSelfPermissionWarningOpen] =
+    useState(false);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  const [usersToRemove, setUsersToRemove] = useState<string[]>([]);
+  const [isLeaveAction, setIsLeaveAction] = useState(false);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [removing, setRemoving] = useState(false);
+  const { toast } = useToast();
 
   // Build filter request
-  const filterRequest = useMemo(() => ({
-    page,
-    pageSize,
-    search: searchQuery || undefined,
-    role: roleFilter !== "all" ? roleFilter : undefined,
-    status: statusFilter !== "all" ? statusFilter : undefined,
-    teamId,
-  }), [page, pageSize, searchQuery, roleFilter, statusFilter, teamId])
+  const filterRequest = useMemo(
+    () => ({
+      page,
+      pageSize,
+      search: searchQuery || undefined,
+      role: roleFilter !== "all" ? roleFilter : undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      teamId,
+    }),
+    [page, pageSize, searchQuery, roleFilter, statusFilter, teamId],
+  );
 
   // Fetch team members from API
-  const { data: filterResponse, loading, refetch } = useApi(
-    () => teamMembersApi.filterTeamMembers(filterRequest),
-    { 
-      enabled: true,
-      cacheKey: `team_members_filter_${JSON.stringify(filterRequest)}`
-    }
-  )
+  const {
+    data: filterResponse,
+    loading,
+    refetch,
+  } = useApi(() => teamMembersApi.filterTeamMembers(filterRequest), {
+    enabled: true,
+    cacheKey: `team_members_filter_${JSON.stringify(filterRequest)}`,
+  });
 
   // Reset to page 1 when filters change
   useEffect(() => {
-    setPage(1)
-  }, [searchQuery, roleFilter, statusFilter, teamId])
+    setPage(1);
+  }, [searchQuery, roleFilter, statusFilter, teamId]);
 
   // If filtering by teamId, take the team name from the first item (teams[0].name)
   const teamNameFromItems = useMemo(() => {
-    if (!teamId || !filterResponse?.data?.items || filterResponse.data.items.length === 0) return undefined
-    const first = filterResponse.data.items[0] as TeamMember
-    return first.teams && first.teams.length > 0 ? first.teams[0].name : undefined
-  }, [teamId, filterResponse])
+    if (
+      !teamId ||
+      !filterResponse?.data?.items ||
+      filterResponse.data.items.length === 0
+    )
+      return undefined;
+    const first = filterResponse.data.items[0] as TeamMember;
+    return first.teams && first.teams.length > 0
+      ? first.teams[0].name
+      : undefined;
+  }, [teamId, filterResponse]);
 
   // Push teamName up for the header
   useEffect(() => {
-    if (!onTeamNameChange) return
-    onTeamNameChange(teamNameFromItems)
-  }, [teamNameFromItems, onTeamNameChange])
+    if (!onTeamNameChange) return;
+    onTeamNameChange(teamNameFromItems);
+  }, [teamNameFromItems, onTeamNameChange]);
 
   // Transform API response to display format
   const filteredUsers = useMemo(() => {
-    if (!filterResponse?.data?.items) return []
-    
+    if (!filterResponse?.data?.items) return [];
+
     return filterResponse.data.items.map((user: TeamMember) => {
-      const appAccessCount = user.permissions ? Object.keys(user.permissions).length : 0
-      const metaAdAccountCount = user.metaAdAccountCount ?? user.metaAdAccountIds?.length ?? 0
-      
+      const appAccessCount = user.permissions
+        ? Object.keys(user.permissions).length
+        : 0;
+      const metaAdAccountCount =
+        user.metaAdAccountCount ?? user.metaAdAccountIds?.length ?? 0;
+
       // If filtering by teamId, prefer the user role in that team; fallback to overall user.role
-      const teamRole = teamId ? user.teams.find((t) => t.id === teamId)?.role : undefined
-      const effectiveRole = (teamRole || user.role || "viewer").toLowerCase()
+      const teamRole = teamId
+        ? user.teams.find((t) => t.id === teamId)?.role
+        : undefined;
+      const effectiveRole = (teamRole || user.role || "viewer").toLowerCase();
       const roleKey: "admin" | "editor" | "viewer" =
-        effectiveRole === "admin" || effectiveRole === "editor" || effectiveRole === "viewer"
+        effectiveRole === "admin" ||
+        effectiveRole === "editor" ||
+        effectiveRole === "viewer"
           ? (effectiveRole as "admin" | "editor" | "viewer")
-          : "viewer"
-      
-      const displayStatus = (user.status || (user.organization?.id ? "active" : "invited")) as "active" | "invited" | "inactive" | "locked" | "pending"
-      
+          : "viewer";
+
+      const displayStatus = (user.status ||
+        (user.organization?.id ? "active" : "invited")) as
+        | "active"
+        | "invited"
+        | "inactive"
+        | "locked"
+        | "pending";
+
       // Get joinedAt from team if filtering by teamId
-      const teamJoinedAt = teamId ? user.teams.find((t) => t.id === teamId)?.joinedAt : undefined
-      
+      const teamJoinedAt = teamId
+        ? user.teams.find((t) => t.id === teamId)?.joinedAt
+        : undefined;
+
       return {
         id: user.id,
         name: user.fullName || user.email,
@@ -214,104 +287,112 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         isOnline: false, // TODO: Add online status if available
         role: roleKey,
         // Display role name from effectiveRole
-        teams: user.teams.map(t => ({ id: t.id, name: t.name })),
+        teams: user.teams.map((t) => ({ id: t.id, name: t.name })),
         appAccess: appAccessCount,
         metaAdAccounts: metaAdAccountCount,
         status: displayStatus,
         lastActive: "N/A", // TODO: Get lastActive from API if available
         joinedAt: teamJoinedAt, // JoinedAt from team membership
-        isTeamLead: teamId ? Boolean(user.teams.find((t) => t.id === teamId)?.isTeamLead) : false,
+        isTeamLead: teamId
+          ? Boolean(user.teams.find((t) => t.id === teamId)?.isTeamLead)
+          : false,
         permissions: user.permissions, // Store permissions for modal
-      }
-    })
-  }, [filterResponse, teamId])
+      };
+    });
+  }, [filterResponse, teamId]);
 
   // Sort users based on sortColumn and sortDirection
   const sortedUsers = useMemo(() => {
-    if (!sortColumn) return filteredUsers
+    if (!sortColumn) return filteredUsers;
 
     return [...filteredUsers].sort((a, b) => {
-      let comparison = 0
-      
+      let comparison = 0;
+
       switch (sortColumn) {
         case "name":
-          comparison = a.name.localeCompare(b.name)
-          break
+          comparison = a.name.localeCompare(b.name);
+          break;
         case "role":
-          const roleOrder = { admin: 0, editor: 1, viewer: 2 }
-          comparison = roleOrder[a.role] - roleOrder[b.role]
-          break
+          const roleOrder = { admin: 0, editor: 1, viewer: 2 };
+          comparison = roleOrder[a.role] - roleOrder[b.role];
+          break;
         case "teams":
-          comparison = a.teams.length - b.teams.length
-          break
+          comparison = a.teams.length - b.teams.length;
+          break;
         case "appAccess":
-          comparison = a.appAccess - b.appAccess
-          break
+          comparison = a.appAccess - b.appAccess;
+          break;
         case "metaAdAccounts":
-          comparison = a.metaAdAccounts - b.metaAdAccounts
-          break
+          comparison = a.metaAdAccounts - b.metaAdAccounts;
+          break;
         case "status":
-          comparison = a.status.localeCompare(b.status)
-          break
+          comparison = a.status.localeCompare(b.status);
+          break;
         case "joinedAt":
-          const aDate = a.joinedAt ? new Date(a.joinedAt).getTime() : 0
-          const bDate = b.joinedAt ? new Date(b.joinedAt).getTime() : 0
-          comparison = aDate - bDate
-          break
+          const aDate = a.joinedAt ? new Date(a.joinedAt).getTime() : 0;
+          const bDate = b.joinedAt ? new Date(b.joinedAt).getTime() : 0;
+          comparison = aDate - bDate;
+          break;
         default:
-          comparison = 0
+          comparison = 0;
       }
-      
-      return sortDirection === "asc" ? comparison : -comparison
-    })
-  }, [filteredUsers, sortColumn, sortDirection])
 
-  const totalUsers = filterResponse?.data?.total || 0
-  const totalPages = filterResponse?.data?.totalPages || 0
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [filteredUsers, sortColumn, sortDirection]);
+
+  const totalUsers = filterResponse?.data?.total || 0;
+  const totalPages = filterResponse?.data?.totalPages || 0;
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       if (sortDirection === "asc") {
-        setSortDirection("desc")
+        setSortDirection("desc");
       } else {
-        setSortColumn(null)
-        setSortDirection("asc")
+        setSortColumn(null);
+        setSortDirection("asc");
       }
     } else {
-      setSortColumn(column)
-      setSortDirection("asc")
+      setSortColumn(column);
+      setSortDirection("asc");
     }
-  }
+  };
 
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column) {
-      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
     }
-    return sortDirection === "asc" 
-      ? <ArrowUp className="w-4 h-4 ml-1 text-blue-600" />
-      : <ArrowDown className="w-4 h-4 ml-1 text-blue-600" />
-  }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="w-4 h-4 ml-1 text-blue-600" />
+    ) : (
+      <ArrowDown className="w-4 h-4 ml-1 text-blue-600" />
+    );
+  };
 
   const toggleSelectAll = () => {
     if (selectedUsers.length === sortedUsers.length) {
-      setSelectedUsers([])
+      setSelectedUsers([]);
     } else {
-      setSelectedUsers(sortedUsers.map((u) => u.id))
+      setSelectedUsers(sortedUsers.map((u) => u.id));
     }
-  }
+  };
 
   const toggleSelectUser = (userId: string) => {
-    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
-  }
+    setSelectedUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
+    );
+  };
 
   const handlePageSizeChange = (newSize: string) => {
-    setPageSize(Number(newSize))
-    setPage(1)
-  }
+    setPageSize(Number(newSize));
+    setPage(1);
+  };
 
   const handlePageChange = (newPage: number) => {
-    setPage(newPage)
-  }
+    setPage(newPage);
+  };
 
   const handleRemoveClick = (userIds: string[]) => {
     if (userIds.length === 0) {
@@ -319,58 +400,66 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         title: "Error",
         description: "Please select at least one user to remove",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     const onlySelf =
-      userIds.length === 1 && currentUserId != null && userIds[0] === currentUserId
-    setIsLeaveAction(onlySelf)
-    setUsersToRemove(userIds)
-    setActionErrorMessage(null)
+      userIds.length === 1 &&
+      currentUserId != null &&
+      userIds[0] === currentUserId;
+    setIsLeaveAction(onlySelf);
+    setUsersToRemove(userIds);
+    setActionErrorMessage(null);
     setTimeout(() => {
-      setRemoveConfirmOpen(true)
-    }, 0)
-  }
+      setRemoveConfirmOpen(true);
+    }, 0);
+  };
 
   const handleLeaveClick = () => {
-    if (!currentUserId) return
-    setIsLeaveAction(true)
-    setUsersToRemove([currentUserId])
-    setActionErrorMessage(null)
+    if (!currentUserId) return;
+    setIsLeaveAction(true);
+    setUsersToRemove([currentUserId]);
+    setActionErrorMessage(null);
     setTimeout(() => {
-      setRemoveConfirmOpen(true)
-    }, 0)
-  }
+      setRemoveConfirmOpen(true);
+    }, 0);
+  };
 
   const handleConfirmRemove = async () => {
-    if (usersToRemove.length === 0) return
+    if (usersToRemove.length === 0) return;
 
-    setRemoving(true)
-    setActionErrorMessage(null)
-    const userNameById = new Map(sortedUsers.map((u) => [u.id, u.name]))
-    const isSingleLeave = isLeaveAction && usersToRemove.length === 1
+    setRemoving(true);
+    setActionErrorMessage(null);
+    const userNameById = new Map(sortedUsers.map((u) => [u.id, u.name]));
+    const isSingleLeave = isLeaveAction && usersToRemove.length === 1;
 
     try {
-      const results: Array<{ userId: string; success: boolean; error?: string }> = []
+      const results: Array<{
+        userId: string;
+        success: boolean;
+        error?: string;
+      }> = [];
 
       for (const userId of usersToRemove) {
-        const isSelf = currentUserId != null && userId === currentUserId
+        const isSelf = currentUserId != null && userId === currentUserId;
         try {
           const response = isSelf
             ? await teamMembersApi.leaveTeam(teamId)
-            : await teamMembersApi.removeUserFromTeam(userId, teamId)
+            : await teamMembersApi.removeUserFromTeam(userId, teamId);
           if (response.success) {
-            results.push({ userId, success: true })
+            results.push({ userId, success: true });
           } else {
             results.push({
               userId,
               success: false,
               error: extractTeamActionError(
                 { message: response.message },
-                isSelf ? "Failed to leave team" : "Failed to remove user from team",
+                isSelf
+                  ? "Failed to leave team"
+                  : "Failed to remove user from team",
               ),
-            })
+            });
           }
         } catch (err: unknown) {
           results.push({
@@ -378,24 +467,28 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
             success: false,
             error: extractTeamActionError(
               err,
-              isSelf ? "Failed to leave team" : "Failed to remove user from team",
+              isSelf
+                ? "Failed to leave team"
+                : "Failed to remove user from team",
             ),
-          })
+          });
         }
       }
 
-      const failures = results.filter((r) => !r.success)
-      const successCount = results.length - failures.length
-      const failureDetail = formatTeamActionFailures(failures, userNameById)
+      const failures = results.filter((r) => !r.success);
+      const successCount = results.length - failures.length;
+      const failureDetail = formatTeamActionFailures(failures, userNameById);
 
       if (failures.length === results.length) {
-        setActionErrorMessage(failureDetail)
+        setActionErrorMessage(failureDetail);
         toast({
-          title: isSingleLeave ? "Could not leave team" : "Could not remove from team",
+          title: isSingleLeave
+            ? "Could not leave team"
+            : "Could not remove from team",
           description: failureDetail,
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       if (failures.length > 0) {
@@ -403,7 +496,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           title: "Some actions failed",
           description: failureDetail,
           variant: "destructive",
-        })
+        });
       }
 
       if (successCount > 0) {
@@ -411,55 +504,63 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           toast({
             title: "Left team",
             description: "You have left the team successfully.",
-          })
+          });
         } else if (failures.length === 0) {
           toast({
             title: "Users removed",
             description: `${successCount} user${successCount > 1 ? "s" : ""} removed from team successfully.`,
-          })
+          });
         }
       }
 
-      setSelectedUsers([])
-      setRemoveConfirmOpen(false)
-      setUsersToRemove([])
-      setIsLeaveAction(false)
-      setActionErrorMessage(null)
+      setSelectedUsers([]);
+      setRemoveConfirmOpen(false);
+      setUsersToRemove([]);
+      setIsLeaveAction(false);
+      setActionErrorMessage(null);
 
-      await refetch()
+      await refetch();
     } catch (err: unknown) {
-      const message = extractTeamActionError(err, "Failed to update team membership")
-      setActionErrorMessage(message)
+      const message = extractTeamActionError(
+        err,
+        "Failed to update team membership",
+      );
+      setActionErrorMessage(message);
       toast({
-        title: isSingleLeave ? "Could not leave team" : "Could not remove from team",
+        title: isSingleLeave
+          ? "Could not leave team"
+          : "Could not remove from team",
         description: message,
         variant: "destructive",
-      })
+      });
     } finally {
-      setRemoving(false)
+      setRemoving(false);
     }
-  }
+  };
 
   const handleSetTeamLead = async (userId: string, userName: string) => {
     try {
-      const response = await teamMembersApi.setTeamLead(teamId, userId)
+      const response = await teamMembersApi.setTeamLead(teamId, userId);
       if (!response.success) {
-        throw new Error(response.message || "Failed to set team lead")
+        throw new Error(response.message || "Failed to set team lead");
       }
 
       toast({
         title: "Team lead updated",
         description: `${userName} is now the team lead.`,
-      })
-      refetch()
+      });
+      refetch();
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err?.response?.data?.error?.message || err?.message || "Failed to set team lead",
+        description:
+          err?.response?.data?.error?.message ||
+          err?.message ||
+          "Failed to set team lead",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -468,7 +569,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (sortedUsers.length === 0) {
@@ -480,8 +581,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Search className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No users found</h3>
-              <p className="text-sm text-slate-500 mb-4">Try adjusting your search or filters</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                No users found
+              </h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Try adjusting your search or filters
+              </p>
               <Button variant="link" className="text-blue-600">
                 Clear all filters
               </Button>
@@ -491,14 +596,23 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Users className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">No team members yet</h3>
-              <p className="text-sm text-slate-500 mb-4">Start by inviting your first team member</p>
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => onInviteClick?.()}>Invite User</Button>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                No team members yet
+              </h3>
+              <p className="text-sm text-slate-500 mb-4">
+                Start by inviting your first team member
+              </p>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => onInviteClick?.()}
+              >
+                Invite User
+              </Button>
             </>
           )}
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -507,20 +621,24 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         {/* Bulk Actions Bar */}
         {selectedUsers.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 bg-blue-50 border-b border-blue-100">
-            <span className="text-sm font-medium text-blue-700">{selectedUsers.length} users selected</span>
+            <span className="text-sm font-medium text-blue-700">
+              {selectedUsers.length} users selected
+            </span>
             <div className="flex gap-2">
               {(() => {
                 const bulkIsSelfOnly =
                   Boolean(teamId && currentUserId) &&
-                  selectedUsers.every((id) => id === currentUserId)
-                if (!bulkIsSelfOnly && !canRemoveMembersFromTeam) return null
+                  selectedUsers.every((id) => id === currentUserId);
+                if (!bulkIsSelfOnly && !canRemoveMembersFromTeam) return null;
                 return (
                   <Button
                     variant="outline"
                     size="sm"
                     className="text-red-600 hover:text-red-700 bg-transparent"
                     onClick={() =>
-                      bulkIsSelfOnly ? handleLeaveClick() : handleRemoveClick(selectedUsers)
+                      bulkIsSelfOnly
+                        ? handleLeaveClick()
+                        : handleRemoveClick(selectedUsers)
                     }
                   >
                     {bulkIsSelfOnly ? (
@@ -530,12 +648,20 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                     )}
                     {bulkIsSelfOnly ? "Leave" : "Remove"}
                   </Button>
-                )
+                );
               })()}
-              <Button variant="outline" size="sm" className="text-amber-600 hover:text-amber-700 bg-transparent">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-amber-600 hover:text-amber-700 bg-transparent"
+              >
                 Deactivate
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedUsers([])}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedUsers([])}
+              >
                 <X className="w-4 h-4 mr-1" />
                 Clear
               </Button>
@@ -546,16 +672,19 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 hover:bg-slate-50">
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedUsers.length === sortedUsers.length && sortedUsers.length > 0}
+                    checked={
+                      selectedUsers.length === sortedUsers.length &&
+                      sortedUsers.length > 0
+                    }
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("name")}
                   >
                     User
@@ -564,7 +693,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("role")}
                   >
                     Role
@@ -573,7 +702,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("teams")}
                   >
                     Teams
@@ -582,7 +711,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("appAccess")}
                   >
                     App Access
@@ -591,7 +720,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("metaAdAccounts")}
                   >
                     Meta Ad Accounts
@@ -600,7 +729,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("status")}
                   >
                     Status
@@ -609,7 +738,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 </TableHead>
                 <TableHead>
                   <button
-                    className="flex items-center font-medium hover:text-blue-600 transition-colors"
+                    className="flex items-center font-medium transition-colors hover:text-primary"
                     onClick={() => handleSort("joinedAt")}
                   >
                     {teamId ? "Joined At" : "Last Active"}
@@ -624,7 +753,11 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                 <TableRow
                   key={user.id}
                   className={
-                    user.status === "inactive" ? "opacity-60" : user.status === "invited" ? "bg-amber-50/30" : ""
+                    user.status === "inactive"
+                      ? "opacity-60"
+                      : user.status === "invited"
+                        ? "bg-amber-500/5"
+                        : ""
                   }
                 >
                   <TableCell>
@@ -641,7 +774,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                       <div className="relative">
                         <Avatar className="h-9 w-9">
                           {user.avatar && <AvatarImage src={user.avatar} />}
-                          <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                          <AvatarFallback className="bg-primary/10 text-sm text-primary">
                             {user.name
                               .split(" ")
                               .map((n) => n[0])
@@ -655,21 +788,30 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-slate-900 group-hover:text-blue-600">{user.name}</p>
+                          <p className="font-medium text-foreground group-hover:text-primary">
+                            {user.name}
+                          </p>
                           {teamId && currentUserId === user.id && (
-                            <Badge variant="outline" className="text-xs font-normal text-blue-700 border-blue-200 bg-blue-50">
+                            <Badge
+                              variant="outline"
+                              className="border-primary/25 bg-primary/5 text-xs font-normal text-primary"
+                            >
                               &lt;&lt;me&gt;&gt;
                             </Badge>
                           )}
                           {user.isTeamLead && (
-                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 gap-1">
-                              <Crown className="w-3 h-3" />
+                            <Badge className="gap-1 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400">
+                              <Crown className="h-3 w-3" />
                               Team Lead
                             </Badge>
                           )}
                         </div>
                         <p
-                          className={`text-xs ${user.status === "invited" ? "italic text-amber-600" : "text-slate-500"}`}
+                          className={`text-xs ${
+                            user.status === "invited"
+                              ? "italic text-amber-700 dark:text-amber-400"
+                              : "text-muted-foreground"
+                          }`}
                         >
                           {user.status === "invited" ? "Pending" : user.email}
                         </p>
@@ -677,16 +819,22 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`${roleColors[user.role]} capitalize`}>{user.role}</Badge>
+                    <Badge className={`${roleColors[user.role]} capitalize`}>
+                      {user.role}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {user.teams.length === 0 ? (
-                      <span className="text-sm text-slate-400">No teams</span>
+                      <span className="text-sm text-muted-foreground">
+                        No teams
+                      </span>
                     ) : teamId ? (
                       // When filtering by teamId: show current team + number of other teams
                       (() => {
-                        const currentTeam = user.teams.find(t => t.id === teamId)
-                        const otherTeamsCount = user.teams.length - 1
+                        const currentTeam = user.teams.find(
+                          (t) => t.id === teamId,
+                        );
+                        const otherTeamsCount = user.teams.length - 1;
                         return (
                           <div className="flex flex-wrap gap-1">
                             {currentTeam && (
@@ -697,23 +845,33 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                             {otherTeamsCount > 0 && (
                               <Tooltip>
                                 <TooltipTrigger>
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
                                     +{otherTeamsCount}
                                   </Badge>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {user.teams.filter(t => t.id !== teamId).map(t => t.name).join(", ")}
+                                  {user.teams
+                                    .filter((t) => t.id !== teamId)
+                                    .map((t) => t.name)
+                                    .join(", ")}
                                 </TooltipContent>
                               </Tooltip>
                             )}
                           </div>
-                        )
+                        );
                       })()
                     ) : (
                       // When not filtering by teamId: show up to 2 teams
                       <div className="flex flex-wrap gap-1">
                         {user.teams.slice(0, 2).map((team) => (
-                          <Badge key={team.id} variant="outline" className="text-xs">
+                          <Badge
+                            key={team.id}
+                            variant="outline"
+                            className="text-xs"
+                          >
                             {team.name}
                           </Badge>
                         ))}
@@ -724,7 +882,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                                 +{user.teams.length - 2} more
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent>{user.teams.slice(2).map(t => t.name).join(", ")}</TooltipContent>
+                            <TooltipContent>
+                              {user.teams
+                                .slice(2)
+                                .map((t) => t.name)
+                                .join(", ")}
+                            </TooltipContent>
                           </Tooltip>
                         )}
                       </div>
@@ -734,7 +897,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                     <Tooltip>
                       <TooltipTrigger className="flex items-center gap-1 text-sm">
                         {`${user.appAccess} Apps`}
-                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">
@@ -747,7 +910,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                     <Tooltip>
                       <TooltipTrigger className="flex items-center gap-1 text-sm">
                         {`${user.metaAdAccounts} Accounts`}
-                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">
@@ -758,11 +921,18 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${(statusConfig[user.status] || statusConfig.inactive).color}`} />
-                      <span className="text-sm">{(statusConfig[user.status] || statusConfig.inactive).label}</span>
+                      <span
+                        className={`w-2 h-2 rounded-full ${(statusConfig[user.status] || statusConfig.inactive).color}`}
+                      />
+                      <span className="text-sm">
+                        {
+                          (statusConfig[user.status] || statusConfig.inactive)
+                            .label
+                        }
+                      </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-slate-500">
+                  <TableCell className="text-sm text-muted-foreground">
                     {teamId && user.joinedAt
                       ? new Date(user.joinedAt).toLocaleDateString("en-US", {
                           year: "numeric",
@@ -780,7 +950,9 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
-                          <Link href={`/team-members/${user.id}?teamId=${encodeURIComponent(teamId)}`}>
+                          <Link
+                            href={`/team-members/${user.id}?teamId=${encodeURIComponent(teamId)}`}
+                          >
                             <User className="w-4 h-4 mr-2" />
                             View Profile
                           </Link>
@@ -791,20 +963,24 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            const currentUser = getCurrentUser()
+                            const currentUser = getCurrentUser();
                             if (currentUser && user.id === currentUser.id) {
                               // User is trying to manage their own permissions
-                              setSelfPermissionWarningOpen(true)
-                              return
+                              setSelfPermissionWarningOpen(true);
+                              return;
                             }
                             // Find the user data from sortedUsers to get permissions
-                            const userData = sortedUsers.find((u) => u.id === user.id)
-                            setPermissionsUserId(user.id)
-                            setPermissionsUserName(user.name)
-                            setPermissionsUserRole(user.role)
-                            setPermissionsModalOpen(true)
+                            const userData = sortedUsers.find(
+                              (u) => u.id === user.id,
+                            );
+                            setPermissionsUserId(user.id);
+                            setPermissionsUserName(user.name);
+                            setPermissionsUserRole(user.role);
+                            setPermissionsModalOpen(true);
                             // Store initial permissions to pass to modal
-                            setInitialPermissions((userData as any)?.permissions || {})
+                            setInitialPermissions(
+                              (userData as any)?.permissions || {},
+                            );
                           }}
                         >
                           <Shield className="w-4 h-4 mr-2" />
@@ -812,16 +988,20 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            setMappingUserId(user.id)
-                            setMappingUserName(user.name)
-                            setMappingModalOpen(true)
+                            setMappingUserId(user.id);
+                            setMappingUserName(user.name);
+                            setMappingModalOpen(true);
                           }}
                         >
                           <Database className="w-4 h-4 mr-2" />
                           History Permission
                         </DropdownMenuItem>
                         {teamId && !user.isTeamLead && (
-                          <DropdownMenuItem onClick={() => handleSetTeamLead(user.id, user.name)}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleSetTeamLead(user.id, user.name)
+                            }
+                          >
                             <Crown className="w-4 h-4 mr-2" />
                             Set as Team Lead
                           </DropdownMenuItem>
@@ -835,7 +1015,9 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                         )}
                         <DropdownMenuItem>
                           <UserX className="w-4 h-4 mr-2" />
-                          {user.status === "inactive" ? "Reactivate User" : "Deactivate User"}
+                          {user.status === "inactive"
+                            ? "Reactivate User"
+                            : "Deactivate User"}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {teamId && currentUserId === user.id ? (
@@ -867,12 +1049,16 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         {/* Pagination */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
           <p className="text-sm text-slate-500">
-            Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalUsers)} of {totalUsers} users
+            Showing {(page - 1) * pageSize + 1}-
+            {Math.min(page * pageSize, totalUsers)} of {totalUsers} users
           </p>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Rows per page:</span>
-              <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={handlePageSizeChange}
+              >
                 <SelectTrigger className="w-16 h-8">
                   <SelectValue />
                 </SelectTrigger>
@@ -884,25 +1070,25 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
               </Select>
             </div>
             <div className="flex gap-1">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-8 w-8 bg-transparent" 
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 bg-transparent"
                 disabled={page === 1}
                 onClick={() => handlePageChange(page - 1)}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                let pageNum: number
+                let pageNum: number;
                 if (totalPages <= 5) {
-                  pageNum = i + 1
+                  pageNum = i + 1;
                 } else if (page <= 3) {
-                  pageNum = i + 1
+                  pageNum = i + 1;
                 } else if (page >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
+                  pageNum = totalPages - 4 + i;
                 } else {
-                  pageNum = page - 2 + i
+                  pageNum = page - 2 + i;
                 }
                 return (
                   <Button
@@ -914,12 +1100,12 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
                   >
                     {pageNum}
                   </Button>
-                )
+                );
               })}
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-8 w-8 bg-transparent" 
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 bg-transparent"
                 disabled={page >= totalPages}
                 onClick={() => handlePageChange(page + 1)}
               >
@@ -941,7 +1127,7 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
           initialPermissions={initialPermissions}
           onSuccess={() => {
             // Refresh the users table data
-            refetch()
+            refetch();
           }}
         />
       )}
@@ -950,8 +1136,8 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         <AbUserAppMappingModal
           open={mappingModalOpen}
           onOpenChange={(open) => {
-            setMappingModalOpen(open)
-            if (!open) setMappingUserId(null)
+            setMappingModalOpen(open);
+            if (!open) setMappingUserId(null);
           }}
           userId={mappingUserId}
           userName={mappingUserName}
@@ -959,16 +1145,23 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       )}
 
       {/* Self Permission Warning Modal */}
-      <Dialog open={selfPermissionWarningOpen} onOpenChange={setSelfPermissionWarningOpen}>
+      <Dialog
+        open={selfPermissionWarningOpen}
+        onOpenChange={setSelfPermissionWarningOpen}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Cannot Change Own Permissions</DialogTitle>
             <DialogDescription>
-              You cannot change your own permissions. Please contact an administrator if you need to update your access level.
+              You cannot change your own permissions. Please contact an
+              administrator if you need to update your access level.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelfPermissionWarningOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setSelfPermissionWarningOpen(false)}
+            >
               Close
             </Button>
           </DialogFooter>
@@ -979,11 +1172,11 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
       <AlertDialog
         open={removeConfirmOpen}
         onOpenChange={(open) => {
-          setRemoveConfirmOpen(open)
+          setRemoveConfirmOpen(open);
           if (!open) {
-            setIsLeaveAction(false)
-            setUsersToRemove([])
-            setActionErrorMessage(null)
+            setIsLeaveAction(false);
+            setUsersToRemove([]);
+            setActionErrorMessage(null);
           }
         }}
       >
@@ -997,12 +1190,19 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground">
                 {isLeaveAction && usersToRemove.length === 1 ? (
-                  <p>Are you sure you want to leave this team? You will lose access to this team&apos;s resources.</p>
+                  <p>
+                    Are you sure you want to leave this team? You will lose
+                    access to this team&apos;s resources.
+                  </p>
                 ) : usersToRemove.length === 1 ? (
-                  <p>Are you sure you want to remove this user from the team? This action cannot be undone.</p>
+                  <p>
+                    Are you sure you want to remove this user from the team?
+                    This action cannot be undone.
+                  </p>
                 ) : (
                   <p>
-                    Are you sure you want to remove {usersToRemove.length} users from the team? This action cannot be undone.
+                    Are you sure you want to remove {usersToRemove.length} users
+                    from the team? This action cannot be undone.
                   </p>
                 )}
                 {actionErrorMessage && (
@@ -1033,5 +1233,5 @@ export function UsersTable({ searchQuery, roleFilter, statusFilter, teamId, onIn
         </AlertDialogContent>
       </AlertDialog>
     </TooltipProvider>
-  )
+  );
 }

@@ -122,16 +122,16 @@ export function OrgEmailSettingsSection({ orgId, canEdit }: OrgEmailSettingsSect
   }
 
   return (
-    <Card className="border-slate-200">
+    <Card className="border-border bg-card text-card-foreground">
       <CardHeader className="pb-4">
-        <CardTitle className="text-base font-semibold text-slate-900">Email Settings</CardTitle>
+        <CardTitle className="text-base font-semibold text-foreground">Email Settings</CardTitle>
         <CardDescription>
           SMTP configuration used when this organization sends emails (reports, alerts, invitations).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading email settings…
           </div>
@@ -192,17 +192,17 @@ export function OrgEmailSettingsSection({ orgId, canEdit }: OrgEmailSettingsSect
                   autoComplete="new-password"
                 />
                 {form.hasAppPassword ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     Leave blank to keep the current app password.
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-slate-900">Enable SSL/TLS</p>
-                <p className="text-xs text-slate-500">Recommended for port 587 (STARTTLS).</p>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/40 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">Enable SSL/TLS</p>
+                <p className="text-xs text-muted-foreground">Recommended for port 587 (STARTTLS).</p>
               </div>
               <Switch
                 checked={form.enableSsl}
@@ -213,7 +213,7 @@ export function OrgEmailSettingsSection({ orgId, canEdit }: OrgEmailSettingsSect
 
             {canEdit && dirty ? (
               <Button
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => void handleSave()}
                 disabled={saving}
               >

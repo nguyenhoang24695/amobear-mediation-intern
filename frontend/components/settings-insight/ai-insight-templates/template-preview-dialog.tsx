@@ -33,12 +33,12 @@ export function TemplatePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[min(88dvh,800px)] w-[min(96vw,640px)] max-w-[min(96vw,640px)] sm:max-w-[min(96vw,640px)] flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="flex h-[88dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] flex-col gap-0 overflow-hidden p-0 sm:h-[min(88dvh,800px)] sm:w-[min(96vw,640px)] sm:max-w-[min(96vw,640px)]">
         <DialogHeader className="shrink-0 border-b px-6 py-4 pr-14 text-left">
           <DialogTitle>Preview: {template.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap gap-2">
               {template.isDefault ? (

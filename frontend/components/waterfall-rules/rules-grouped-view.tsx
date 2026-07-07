@@ -238,12 +238,12 @@ export function RulesGroupedView({
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-2">
-        <div className="flex items-center justify-end gap-2 mb-2">
-          <Button variant="outline" size="sm" onClick={expandAll} className="text-xs">
+        <div className="mb-2 flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+          <Button variant="outline" size="sm" onClick={expandAll} className="w-full text-xs sm:w-auto">
             <ChevronsUpDown className="w-3 h-3 mr-1" />
             Expand All
           </Button>
-          <Button variant="outline" size="sm" onClick={collapseAll} className="text-xs">
+          <Button variant="outline" size="sm" onClick={collapseAll} className="w-full text-xs sm:w-auto">
             <ChevronsUpDown className="w-3 h-3 mr-1" />
             Collapse All
           </Button>
@@ -356,124 +356,126 @@ export function RulesGroupedView({
                       No rules in this group
                     </div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/40 hover:bg-muted/40">
-                          <TableHead className="w-16 text-xs font-medium uppercase tracking-wide">Order</TableHead>
-                          <TableHead className="text-xs font-medium uppercase tracking-wide">Rule Name</TableHead>
-                          <TableHead className="w-24 text-xs font-medium uppercase tracking-wide">Status</TableHead>
-                          <TableHead className="w-64 text-xs font-medium uppercase tracking-wide">Conditions</TableHead>
-                          <TableHead className="w-36 text-xs font-medium uppercase tracking-wide">Action</TableHead>
-                          <TableHead className="w-24 text-xs font-medium uppercase tracking-wide">Priority</TableHead>
-                          <TableHead className="w-12" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {group.rules.map((rule) => (
-                          <TableRow
-                            key={rule.id}
-                            className={`hover:bg-muted/40 transition-colors ${!rule.active ? "opacity-60" : ""}`}
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <GripVertical className="w-4 h-4 text-muted-foreground/50" />
-                                <span className="text-sm font-mono text-muted-foreground">{rule.displayOrder}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="p-1.5 rounded bg-muted">
-                                  <ListChecks className="w-4 h-4 text-muted-foreground" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="font-medium text-foreground">{rule.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                    {conditionsSummary(rule) || "No conditions"}
-                                  </p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {rule.active ? (
-                                <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
-                                  <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                  Active
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-muted text-muted-foreground hover:bg-muted">
-                                  <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                                  Inactive
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <p className="text-xs text-muted-foreground truncate max-w-[240px] cursor-default">
-                                    {conditionsSummary(rule) || "No conditions"}
-                                  </p>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-sm">{conditionsSummary(rule) || "No conditions set"}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={`${actionColorMap[rule.actionType] || "bg-muted text-muted-foreground"} hover:opacity-90`}>
-                                {rule.actionType}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={`${priorityColorMap[rule.priority]} hover:opacity-90 capitalize`}>
-                                {rule.priority}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {canManage && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => onEdit(rule)}>
-                                      <Pencil className="w-4 h-4 mr-2" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => onDuplicate(rule.id)}>
-                                      <Copy className="w-4 h-4 mr-2" />
-                                      Duplicate
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => onToggle(rule.id)}>
-                                      {rule.active ? (
-                                        <>
-                                          <Pause className="w-4 h-4 mr-2" />
-                                          Disable
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Play className="w-4 h-4 mr-2" />
-                                          Enable
-                                        </>
-                                      )}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => setDeleteId(rule.id)}
-                                      className="text-destructive focus:text-destructive"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </TableCell>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40 hover:bg-muted/40">
+                            <TableHead className="w-16 text-xs font-medium uppercase tracking-wide">Order</TableHead>
+                            <TableHead className="text-xs font-medium uppercase tracking-wide">Rule Name</TableHead>
+                            <TableHead className="w-24 text-xs font-medium uppercase tracking-wide">Status</TableHead>
+                            <TableHead className="w-64 text-xs font-medium uppercase tracking-wide">Conditions</TableHead>
+                            <TableHead className="w-36 text-xs font-medium uppercase tracking-wide">Action</TableHead>
+                            <TableHead className="w-24 text-xs font-medium uppercase tracking-wide">Priority</TableHead>
+                            <TableHead className="w-12" />
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {group.rules.map((rule) => (
+                            <TableRow
+                              key={rule.id}
+                              className={`hover:bg-muted/40 transition-colors ${!rule.active ? "opacity-60" : ""}`}
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <GripVertical className="w-4 h-4 text-muted-foreground/50" />
+                                  <span className="text-sm font-mono text-muted-foreground">{rule.displayOrder}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <div className="rounded bg-muted p-1.5">
+                                    <ListChecks className="w-4 h-4 text-muted-foreground" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-foreground">{rule.name}</p>
+                                    <p className="max-w-[200px] truncate text-xs text-muted-foreground">
+                                      {conditionsSummary(rule) || "No conditions"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {rule.active ? (
+                                  <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
+                                    <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Active
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-muted text-muted-foreground hover:bg-muted">
+                                    <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                                    Inactive
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className="max-w-[240px] cursor-default truncate text-xs text-muted-foreground">
+                                      {conditionsSummary(rule) || "No conditions"}
+                                    </p>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-sm">{conditionsSummary(rule) || "No conditions set"}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`${actionColorMap[rule.actionType] || "bg-muted text-muted-foreground"} hover:opacity-90`}>
+                                  {rule.actionType}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={`${priorityColorMap[rule.priority]} hover:opacity-90 capitalize`}>
+                                  {rule.priority}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {canManage && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreHorizontal className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => onEdit(rule)}>
+                                        <Pencil className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => onDuplicate(rule.id)}>
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        Duplicate
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => onToggle(rule.id)}>
+                                        {rule.active ? (
+                                          <>
+                                            <Pause className="w-4 h-4 mr-2" />
+                                            Disable
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Play className="w-4 h-4 mr-2" />
+                                            Enable
+                                          </>
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => setDeleteId(rule.id)}
+                                        className="text-destructive focus:text-destructive"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </CollapsibleContent>
               </Card>

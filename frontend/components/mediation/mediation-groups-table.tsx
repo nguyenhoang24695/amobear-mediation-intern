@@ -492,7 +492,8 @@ export function MediationGroupsTable({
   return (
     <TooltipProvider>
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="px-4 sm:px-0">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="sticky top-0 border-b bg-muted/60">
               <tr className="text-xs font-medium text-muted-foreground">
@@ -789,6 +790,7 @@ export function MediationGroupsTable({
               })}
             </tbody>
           </table>
+          </div>
         </div>
 
         <Pagination

@@ -17,6 +17,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -38,6 +39,7 @@ import { invalidateCache, invalidateCachePrefix, useApi } from "@/hooks/use-api"
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { metaAdAccountsApi, metaIntegrationsApi } from "@/lib/api/meta-ads"
 import { Pagination } from "@/components/shared/pagination"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { MetaAdAccountDto, UpsertMetaAdAccountRequestDto } from "@/types/meta-ads"
 import { MoreHorizontal, Edit, RefreshCw, CreditCard, ChevronRight, Download, Loader2, ArrowUpDown, ArrowUp, ArrowDown, Check } from "lucide-react"
 
@@ -126,6 +128,7 @@ type SortDir = "asc" | "desc"
 
 export function AdAccountsContent() {
   const { toast } = useToast()
+  const isMobile = useIsMobile()
   const canEdit = hasScreenFunction(SCREEN_META_ACCOUNTS, "edit")
   const canDisableEnable = hasScreenFunction(SCREEN_META_ACCOUNTS, "disable-enable")
   const currentUser = getCurrentUser()
@@ -148,6 +151,8 @@ export function AdAccountsContent() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [primaryIntegrationDialogOpen, setPrimaryIntegrationDialogOpen] = useState(false)
+  const [primaryIntegrationTarget, setPrimaryIntegrationTarget] = useState<MetaAdAccountDto | null>(null)
   const [editTarget, setEditTarget] = useState<MetaAdAccountDto | null>(null)
   const [form, setForm] = useState<UpsertMetaAdAccountRequestDto>(emptyForm)
   const [syncIntegrationId, setSyncIntegrationId] = useState("")
@@ -195,6 +200,11 @@ export function AdAccountsContent() {
         }],
     [getPrimaryIntegrationName]
   )
+
+  const openPrimaryIntegrationPicker = (account: MetaAdAccountDto) => {
+    setPrimaryIntegrationTarget(account)
+    setPrimaryIntegrationDialogOpen(true)
+  }
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -357,25 +367,25 @@ export function AdAccountsContent() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
+        <div className="min-w-0">
+          <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <span>Meta Ads</span>
             <ChevronRight className="w-3 h-3" />
             <span className="text-foreground font-medium">Ad Accounts</span>
           </nav>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-primary/10 p-2">
               <CreditCard className="w-5 h-5 text-primary" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Meta Ad Accounts</h1>
-              <p className="text-sm text-muted-foreground">Manage synced Meta ad accounts and their connection status</p>
+            <div className="min-w-0">
+              <h1 className="break-words text-lg font-bold text-foreground sm:text-xl">Meta Ad Accounts</h1>
+              <p className="break-words text-sm text-muted-foreground">Manage synced Meta ad accounts and their connection status</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {canEdit ? (
-            <Button variant="outline" size="sm" onClick={() => setSyncDialogOpen(true)} disabled={(integrations?.length ?? 0) === 0}>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setSyncDialogOpen(true)} disabled={(integrations?.length ?? 0) === 0}>
               <Download className="w-4 h-4 mr-2" />
               Sync from Integration
             </Button>
@@ -405,7 +415,163 @@ export function AdAccountsContent() {
         />
       </div>
 
-      <div className="bg-background border border-border rounded-lg overflow-x-auto">
+      <div className="lg:hidden space-y-3">
+        {loading ? (
+          <div className="rounded-lg border border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground">
+            <Loader2 className="mx-auto mb-2 h-4 w-4 animate-spin" />
+            Loading ad accounts...
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-border bg-background px-4 py-10 text-center text-sm text-destructive">
+            {error.message}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-lg border border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground">
+            No ad accounts found.
+          </div>
+        ) : (
+          paginatedAccounts.map((account) => {
+            const isBusy = rowActionLoadingId === account.id
+            const accessibleIntegrations = getAccessibleIntegrations(account)
+            return (
+              <div key={account.id} className="rounded-lg border border-border bg-background p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="break-all font-mono text-[11px] text-primary">{account.metaAdAccountId}</p>
+                    <p className="break-words text-sm font-medium text-foreground">{account.name}</p>
+                    <p className="break-words text-xs text-muted-foreground">{getPrimaryIntegrationName(account)}</p>
+                  </div>
+                  <Badge className={formatAdAccountStatus(account.status) === "Active" ? "bg-green-500/10 text-green-700 dark:text-green-400 text-[11px]" : formatAdAccountStatus(account.status) === "Disabled" || formatAdAccountStatus(account.status) === "Closed" ? "bg-destructive/10 text-destructive text-[11px]" : "bg-muted text-muted-foreground text-[11px]"}>
+                    {formatAdAccountStatus(account.status)}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Currency</div>
+                    <div className="break-words text-foreground">{account.currency ?? "-"}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Timezone</div>
+                    <div className="break-words text-foreground">{account.timeZoneName ?? "-"}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Business ID</div>
+                    <div className="break-all font-mono text-foreground">{account.businessId ?? "-"}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Business Name</div>
+                    <div className="break-words text-foreground">{account.businessName ?? "-"}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Spent</div>
+                    <div className="break-words text-foreground">{formatMoney(account.amountSpent, account.currency)}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Balance</div>
+                    <div className="break-words text-foreground">{formatMoney(account.balance, account.currency)}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Spend Cap</div>
+                    <div className="break-words text-foreground">{formatMoney(account.spendCap, account.currency)}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-muted-foreground">Last Synced</div>
+                    <div className="break-words text-foreground">{formatDateTime(account.lastSyncedAt)}</div>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {accessibleIntegrations.slice(0, 3).map((access) => (
+                    <Badge key={`${account.id}-${access.integrationId}`} variant="outline" className="max-w-full text-[11px] font-normal border-border bg-muted/40 text-muted-foreground">
+                      <span className="truncate">{formatAuthMode(access.authMode)}{access.isPrimary ? " • Primary" : ""}</span>
+                    </Badge>
+                  ))}
+                  {accessibleIntegrations.length > 3 ? (
+                    <Badge variant="outline" className="text-[11px] font-normal border-border bg-muted/40 text-muted-foreground">
+                      +{accessibleIntegrations.length - 3}
+                    </Badge>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={account.isActive} onCheckedChange={() => canDisableEnable && void handleToggleActive(account)} disabled={!canDisableEnable || isBusy} />
+                    <span className="text-xs text-muted-foreground">Active</span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={isBusy}>
+                        {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {canEdit ? (
+                        <DropdownMenuItem onClick={() => openEdit(account)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      ) : null}
+                      {canEdit && accessibleIntegrations.length > 1 ? (
+                        isMobile ? (
+                          <DropdownMenuItem onClick={() => openPrimaryIntegrationPicker(account)}>
+                            <Check className="w-4 h-4 mr-2" />
+                            Set Primary
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <Check className="w-4 h-4 mr-2" />
+                              Set Primary
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="w-[min(18rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] min-w-0 max-h-[min(60vh,24rem)] overflow-x-hidden overflow-y-auto">
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {accessibleIntegrations.map((access) => (
+                                <DropdownMenuItem
+                                  key={access.integrationId}
+                                  disabled={access.integrationId === account.metaIntegrationId}
+                                  onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
+                                >
+                                  {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
+                                  <span className="truncate">{access.integrationName}</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                        )
+                      ) : null}
+                      {canEdit ? (
+                        <DropdownMenuItem onClick={() => void handleSyncSingleAccount(account)}>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Sync
+                        </DropdownMenuItem>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            )
+          })
+        )}
+
+        {filtered.length > 0 ? (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setCurrentPage(1)
+            }}
+            itemName="ad accounts"
+          />
+        ) : null}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-lg border border-border bg-background lg:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
@@ -520,26 +686,33 @@ export function AdAccountsContent() {
                             </DropdownMenuItem>
                           ) : null}
                           {canEdit && accessibleIntegrations.length > 1 ? (
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
+                            isMobile ? (
+                              <DropdownMenuItem onClick={() => openPrimaryIntegrationPicker(account)}>
                                 <Check className="w-4 h-4 mr-2" />
                                 Set Primary
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="min-w-56">
-                                <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {accessibleIntegrations.map((access) => (
-                                  <DropdownMenuItem
-                                    key={access.integrationId}
-                                    disabled={access.integrationId === account.metaIntegrationId}
-                                    onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
-                                  >
-                                    {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
-                                    <span className="truncate">{access.integrationName}</span>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Set Primary
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="w-[min(18rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] min-w-0 max-h-[min(60vh,24rem)] overflow-x-hidden overflow-y-auto">
+                                  <DropdownMenuLabel className="text-xs text-muted-foreground">Accessible integrations</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {accessibleIntegrations.map((access) => (
+                                    <DropdownMenuItem
+                                      key={access.integrationId}
+                                      disabled={access.integrationId === account.metaIntegrationId}
+                                      onClick={() => void handleSetPrimaryIntegration(account, access.integrationId)}
+                                    >
+                                      {access.integrationId === account.metaIntegrationId ? <Check className="w-4 h-4 mr-2" /> : <span className="w-4 mr-2" />}
+                                      <span className="truncate">{access.integrationName}</span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                            )
                           ) : null}
                           {canEdit ? (
                             <DropdownMenuItem onClick={() => void handleSyncSingleAccount(account)}>
@@ -694,6 +867,43 @@ export function AdAccountsContent() {
               {submitting ? "Syncing..." : "Sync"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={primaryIntegrationDialogOpen} onOpenChange={setPrimaryIntegrationDialogOpen}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[420px] p-0 gap-0 overflow-hidden rounded-xl">
+          <DialogHeader className="border-b border-border px-4 py-4 text-left">
+            <DialogTitle className="text-base">Accessible integrations</DialogTitle>
+            <DialogDescription>
+              Choose which integration should become the primary one for this ad account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[min(60vh,28rem)] overflow-y-auto px-4 py-4">
+            <div className="space-y-2">
+              {(primaryIntegrationTarget ? getAccessibleIntegrations(primaryIntegrationTarget) : []).map((access) => (
+                <Button
+                  key={access.integrationId}
+                  type="button"
+                  variant={access.integrationId === primaryIntegrationTarget?.metaIntegrationId ? "secondary" : "outline"}
+                  className="h-auto w-full justify-between gap-3 px-3 py-2 text-left"
+                  disabled={access.integrationId === primaryIntegrationTarget?.metaIntegrationId}
+                  onClick={() => {
+                    if (!primaryIntegrationTarget) return
+                    void handleSetPrimaryIntegration(primaryIntegrationTarget, access.integrationId)
+                    setPrimaryIntegrationDialogOpen(false)
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{access.integrationName}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{formatAuthMode(access.authMode)}</span>
+                  </span>
+                  {access.integrationId === primaryIntegrationTarget?.metaIntegrationId ? (
+                    <Check className="h-4 w-4 shrink-0" />
+                  ) : null}
+                </Button>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

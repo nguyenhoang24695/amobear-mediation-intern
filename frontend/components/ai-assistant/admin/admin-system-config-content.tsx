@@ -246,7 +246,7 @@ export function AdminSystemConfigContent() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     )
@@ -254,20 +254,20 @@ export function AdminSystemConfigContent() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
+      <div className="space-y-6 overflow-hidden px-4 pb-28 pt-6 sm:px-6 sm:pb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+            <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/ai-assistant">
                 <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
-              <h1 className="text-2xl font-semibold  flex items-center gap-2">
-                <Shield className="h-6 w-6" />
+            <div className="min-w-0">
+              <h1 className="flex items-start gap-2 text-2xl font-semibold text-foreground sm:items-center">
+                <Shield className="mt-0.5 h-6 w-6 shrink-0 sm:mt-0" />
                 AI System Configuration
               </h1>
-              <p className="text-sm">
+              <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
                 Quản lý base rules, CRAFT defaults, scoring config và data context
               </p>
             </div>
@@ -275,43 +275,46 @@ export function AdminSystemConfigContent() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="base-rules" className="gap-1.5">
-              <FileText className="h-4 w-4" />
-              Base Rules
-            </TabsTrigger>
-            <TabsTrigger value="craft-defaults" className="gap-1.5">
-              <Sparkles className="h-4 w-4" />
-              CRAFT Defaults
-            </TabsTrigger>
-            <TabsTrigger value="scoring-config" className="gap-1.5">
-              <Sliders className="h-4 w-4" />
-              Scoring Config
-            </TabsTrigger>
-            <TabsTrigger value="data-context" className="gap-1.5">
-              <Database className="h-4 w-4" />
-              Data Context
-            </TabsTrigger>
-          </TabsList>
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <TabsList className="mb-6 w-max min-w-full justify-start sm:min-w-0">
+              <TabsTrigger value="base-rules" className="gap-1.5 px-3">
+                <FileText className="h-4 w-4" />
+                Base Rules
+              </TabsTrigger>
+              <TabsTrigger value="craft-defaults" className="gap-1.5 px-3">
+                <Sparkles className="h-4 w-4" />
+                CRAFT Defaults
+              </TabsTrigger>
+              <TabsTrigger value="scoring-config" className="gap-1.5 px-3">
+                <Sliders className="h-4 w-4" />
+                Scoring Config
+              </TabsTrigger>
+              <TabsTrigger value="data-context" className="gap-1.5 px-3">
+                <Database className="h-4 w-4" />
+                Data Context
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="base-rules">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
+            <Card className="overflow-hidden">
+              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <CardTitle className="text-base font-medium">Global Base Rules</CardTitle>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Version: v{baseRulesConfig?.version || 1} • Updated: {baseRulesConfig?.updatedAt ? new Date(baseRulesConfig.updatedAt).toLocaleDateString() : "N/A"}
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Version: v{baseRulesConfig?.version || 1} - Updated: {baseRulesConfig?.updatedAt ? new Date(baseRulesConfig.updatedAt).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => loadVersions("base_rules")}>
-                    <History className="h-4 w-4 mr-1" />
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+                  <Button variant="outline" size="sm" className="min-w-0 flex-1 sm:flex-none" onClick={() => loadVersions("base_rules")}>
+                    <History className="mr-1 h-4 w-4 shrink-0" />
                     Version History
                   </Button>
                   {isEditingRules ? (
                     <Button
                       variant="outline"
                       size="sm"
+                      className="min-w-0 flex-1 sm:flex-none"
                       onClick={() => {
                         setIsEditingRules(false)
                         setBaseRules(baseRulesOriginal)
@@ -321,8 +324,8 @@ export function AdminSystemConfigContent() {
                       Cancel
                     </Button>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={() => setIsEditingRules(true)}>
-                      <Edit2 className="h-4 w-4 mr-1" />
+                    <Button variant="outline" size="sm" className="min-w-0 flex-1 sm:flex-none" onClick={() => setIsEditingRules(true)}>
+                      <Edit2 className="mr-1 h-4 w-4 shrink-0" />
                       Edit
                     </Button>
                   )}
@@ -333,21 +336,21 @@ export function AdminSystemConfigContent() {
                   value={baseRules}
                   onChange={(e) => setBaseRules(e.target.value)}
                   readOnly={!isEditingRules}
-                  className={cn("min-h-[320px] font-mono text-sm", !isEditingRules && "bg-slate-50 cursor-default")}
+                  className={cn("min-h-[320px] font-mono text-sm", !isEditingRules && "cursor-default bg-muted")}
                 />
                 {isEditingRules && (
-                  <div className="flex items-end gap-4">
-                    <div className="flex-1 space-y-2">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1 space-y-2">
                       <Label>Change Note</Label>
                       <Input placeholder="Describe what changed..." value={changeNote} onChange={(e) => setChangeNote(e.target.value)} />
                     </div>
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="w-full sm:w-auto"
                       disabled={isSaving || baseRules === baseRulesOriginal}
                       onClick={() => handleSaveConfig("base_rules", baseRules, changeNote)}
                     >
-                      {isSaving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                      <Save className="h-4 w-4 mr-1" />
+                      {isSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                      <Save className="mr-1 h-4 w-4" />
                       Save as v{(baseRulesConfig?.version || 0) + 1}
                     </Button>
                   </div>
@@ -358,14 +361,14 @@ export function AdminSystemConfigContent() {
 
           <TabsContent value="craft-defaults">
             <div className="space-y-6">
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <CardTitle className="text-base font-medium">Format Default</CardTitle>
-                      <p className="text-sm text-slate-500 mt-1">Định dạng output mặc định cho AI response</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Định dạng output mặc định cho AI response</p>
                     </div>
-                    <Badge variant="outline" className="text-xs text-slate-500">
+                    <Badge variant="outline" className="w-fit text-xs text-muted-foreground">
                       v{formatConfig?.version || 1}
                     </Badge>
                   </div>
@@ -375,14 +378,14 @@ export function AdminSystemConfigContent() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <CardTitle className="text-base font-medium">Tone Default</CardTitle>
-                      <p className="text-sm text-slate-500 mt-1">Tone & style mặc định cho AI response</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Tone & style mặc định cho AI response</p>
                     </div>
-                    <Badge variant="outline" className="text-xs text-slate-500">
+                    <Badge variant="outline" className="w-fit text-xs text-muted-foreground">
                       v{toneConfig?.version || 1}
                     </Badge>
                   </div>
@@ -394,12 +397,12 @@ export function AdminSystemConfigContent() {
 
               <div className="flex justify-end">
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto"
                   disabled={isSaving || (formatDefault === formatDefaultOriginal && toneDefault === toneDefaultOriginal)}
                   onClick={handleSaveCraftDefaults}
                 >
-                  {isSaving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                  <Save className="h-4 w-4 mr-1" />
+                  {isSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                  <Save className="mr-1 h-4 w-4" />
                   Save CRAFT Defaults
                 </Button>
               </div>
@@ -408,56 +411,56 @@ export function AdminSystemConfigContent() {
 
           <TabsContent value="scoring-config">
             <div className="space-y-6">
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-base font-medium">Knowledge Base Scoring</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label>kb_token_budget</Label>
                       <Input type="number" value={scoringConfig.kb_token_budget ?? ""} onChange={(e) => updateScoringField("kb_token_budget", e.target.value)} />
-                      <p className="text-xs text-slate-500">Max tokens cho KB injection</p>
+                      <p className="text-xs text-muted-foreground">Max tokens cho KB injection</p>
                     </div>
                     <div className="space-y-2">
                       <Label>kb_max_candidates</Label>
                       <Input type="number" value={scoringConfig.kb_max_candidates ?? ""} onChange={(e) => updateScoringField("kb_max_candidates", e.target.value)} />
-                      <p className="text-xs text-slate-500">Số candidates tối đa</p>
+                      <p className="text-xs text-muted-foreground">Số candidates tối đa</p>
                     </div>
                     <div className="space-y-2">
                       <Label>kb_max_inject</Label>
                       <Input type="number" value={scoringConfig.kb_max_inject ?? ""} onChange={(e) => updateScoringField("kb_max_inject", e.target.value)} />
-                      <p className="text-xs text-slate-500">Số articles inject tối đa</p>
+                      <p className="text-xs text-muted-foreground">Số articles inject tối đa</p>
                     </div>
                     <div className="space-y-2">
                       <Label>kb_tag_boost</Label>
                       <Input type="number" step="0.1" value={scoringConfig.kb_tag_boost ?? ""} onChange={(e) => updateScoringField("kb_tag_boost", e.target.value)} />
-                      <p className="text-xs text-slate-500">Tag match boost multiplier</p>
+                      <p className="text-xs text-muted-foreground">Tag match boost multiplier</p>
                     </div>
                     <div className="space-y-2">
                       <Label>kb_focus_boost</Label>
                       <Input type="number" step="0.1" value={scoringConfig.kb_focus_boost ?? ""} onChange={(e) => updateScoringField("kb_focus_boost", e.target.value)} />
-                      <p className="text-xs text-slate-500">Focus area boost multiplier</p>
+                      <p className="text-xs text-muted-foreground">Focus area boost multiplier</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-base font-medium">Model & Prompt Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label>default_max_history</Label>
                       <Input type="number" value={scoringConfig.default_max_history ?? ""} onChange={(e) => updateScoringField("default_max_history", e.target.value)} />
-                      <p className="text-xs text-slate-500">Số messages history tối đa</p>
+                      <p className="text-xs text-muted-foreground">Số messages history tối đa</p>
                     </div>
                     <div className="space-y-2">
                       <Label>default_temperature</Label>
                       <Input type="number" step="0.05" value={scoringConfig.default_temperature ?? ""} onChange={(e) => updateScoringField("default_temperature", e.target.value)} />
-                      <p className="text-xs text-slate-500">Model temperature (0-1)</p>
+                      <p className="text-xs text-muted-foreground">Model temperature (0-1)</p>
                     </div>
                     <div className="space-y-2">
                       <Label>default_provider</Label>
@@ -471,45 +474,45 @@ export function AdminSystemConfigContent() {
                           <SelectItem value="chatgpt">ChatGPT</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-slate-500">AI provider mặc định</p>
+                      <p className="text-xs text-muted-foreground">AI provider mặc định</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-base font-medium">Token Budgets</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label>max_prompt_tokens</Label>
                       <Input type="number" value={scoringConfig.max_prompt_tokens ?? ""} onChange={(e) => updateScoringField("max_prompt_tokens", e.target.value)} />
-                      <p className="text-xs text-slate-500">Max tokens cho toàn bộ prompt</p>
+                      <p className="text-xs text-muted-foreground">Max tokens cho toàn bộ prompt</p>
                     </div>
                     <div className="space-y-2">
                       <Label>data_context_budget</Label>
                       <Input type="number" value={scoringConfig.data_context_budget ?? ""} onChange={(e) => updateScoringField("data_context_budget", e.target.value)} />
-                      <p className="text-xs text-slate-500">Budget cho data context</p>
+                      <p className="text-xs text-muted-foreground">Budget cho data context</p>
                     </div>
                     <div className="space-y-2">
                       <Label>schema_injection_budget</Label>
                       <Input type="number" value={scoringConfig.schema_injection_budget ?? ""} onChange={(e) => updateScoringField("schema_injection_budget", e.target.value)} />
-                      <p className="text-xs text-slate-500">Budget cho schema injection</p>
+                      <p className="text-xs text-muted-foreground">Budget cho schema injection</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={resetScoringToOriginal}>
-                  <RotateCcw className="h-4 w-4 mr-1" />
+              <div className="flex flex-col justify-end gap-2 sm:flex-row">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={resetScoringToOriginal}>
+                  <RotateCcw className="mr-1 h-4 w-4" />
                   Reset
                 </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700" disabled={isSaving} onClick={handleSaveScoringConfig}>
-                  {isSaving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                  <Save className="h-4 w-4 mr-1" />
+                <Button className="w-full sm:w-auto" disabled={isSaving} onClick={handleSaveScoringConfig}>
+                  {isSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                  <Save className="mr-1 h-4 w-4" />
                   Save Config
                 </Button>
               </div>
@@ -517,30 +520,30 @@ export function AdminSystemConfigContent() {
           </TabsContent>
 
           <TabsContent value="data-context">
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <CardTitle className="text-base font-medium">Data Context Content</CardTitle>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Version: v{dataContextConfig?.version || 1} • Updated: {dataContextConfig?.updatedAt ? new Date(dataContextConfig.updatedAt).toLocaleDateString() : "N/A"}
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Version: v{dataContextConfig?.version || 1} - Updated: {dataContextConfig?.updatedAt ? new Date(dataContextConfig.updatedAt).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => loadVersions("system_data_context")}>
-                    <History className="h-4 w-4 mr-1" />
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => loadVersions("system_data_context")}>
+                    <History className="mr-1 h-4 w-4" />
                     Version History
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">Token Usage (estimated)</span>
+                  <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-muted-foreground">Token Usage (estimated)</span>
                     <span className={cn("font-medium", tokenPercentage >= 90 ? "text-red-600" : tokenPercentage >= 70 ? "text-amber-600" : "text-emerald-600")}>
                       ~{Math.round(dataContextTokens).toLocaleString()} / {dataContextBudget.toLocaleString()} tokens ({tokenPercentage}%)
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className={cn("h-full rounded-full transition-all", tokenPercentage >= 90 ? "bg-red-500" : tokenPercentage >= 70 ? "bg-amber-500" : "bg-emerald-500")}
                       style={{ width: `${Math.min(tokenPercentage, 100)}%` }}
@@ -550,19 +553,19 @@ export function AdminSystemConfigContent() {
 
                 <Textarea value={dataContext} onChange={(e) => setDataContext(e.target.value)} className="min-h-[400px] font-mono text-sm" />
 
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-col justify-end gap-2 sm:flex-row">
                   <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-                    <Eye className="h-4 w-4 mr-1" />
+                    <Eye className="mr-1 h-4 w-4" />
                     Preview
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="w-full sm:w-auto"
                     disabled={isSaving || dataContext === dataContextOriginal}
                     onClick={() => handleSaveConfig("system_data_context", dataContext, "Updated data context")}
                   >
-                    {isSaving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                    <Save className="h-4 w-4 mr-1" />
+                    {isSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                    <Save className="mr-1 h-4 w-4" />
                     Save as v{(dataContextConfig?.version || 0) + 1}
                   </Button>
                 </div>
@@ -575,30 +578,30 @@ export function AdminSystemConfigContent() {
       <Dialog open={showVersionHistory} onOpenChange={setShowVersionHistory}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Version History — {versionHistoryKey}</DialogTitle>
+            <DialogTitle>Version History - {versionHistoryKey}</DialogTitle>
           </DialogHeader>
           {isLoadingVersions ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : versions.length === 0 ? (
-            <p className="text-sm text-slate-500 py-4 text-center">No version history yet</p>
+            <p className="text-sm text-muted-foreground py-4 text-center">No version history yet</p>
           ) : (
             <div className="space-y-3 py-2 max-h-[400px] overflow-y-auto">
               {versions.map((v, idx) => (
-                <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border bg-slate-50">
-                  <div>
+                <div key={v.id} className="flex flex-col gap-3 rounded-lg border bg-muted p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">v{v.version}</span>
+                      <span className="font-medium text-foreground">v{v.version}</span>
                       {idx === 0 && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Previous</Badge>}
                     </div>
-                    <p className="text-sm text-slate-600 mt-0.5">{v.changeNote || "No note"}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {v.createdByEmail || "System"} • {new Date(v.createdAt).toLocaleDateString()}
+                    <p className="text-sm text-muted-foreground mt-0.5">{v.changeNote || "No note"}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {v.createdByEmail || "System"} - {new Date(v.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" disabled={isSaving} onClick={() => handleRollback(v.version)}>
-                    {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 mr-1" />}
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={isSaving} onClick={() => handleRollback(v.version)}>
+                    {isSaving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="mr-1 h-3.5 w-3.5" />}
                     Rollback
                   </Button>
                 </div>
@@ -618,8 +621,8 @@ export function AdminSystemConfigContent() {
           <DialogHeader>
             <DialogTitle>Data Context Preview</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[60vh] p-4 bg-slate-50 rounded-lg">
-            <pre className="text-sm text-slate-800 whitespace-pre-wrap font-mono">{dataContext}</pre>
+          <div className="overflow-y-auto max-h-[60vh] p-4 bg-muted rounded-lg">
+            <pre className="text-sm text-foreground whitespace-pre-wrap font-mono">{dataContext}</pre>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreview(false)}>

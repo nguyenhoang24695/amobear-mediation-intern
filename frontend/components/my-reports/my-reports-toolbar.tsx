@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import Link from "next/link"
+import Link from "next/link";
 import {
   BarChart2,
   Download,
@@ -13,23 +13,27 @@ import {
   Share2,
   Star,
   Table2,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
-import { resolveMyReportDateRange } from "@/components/my-reports/hooks/use-my-report-config"
-import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config"
-import { toApiDateString } from "@/lib/reports/report-date-filter-utils"
-import { hasScreenFunction } from "@/lib/auth"
-import { MyReportTemplatePicker } from "@/components/my-reports/my-report-template-picker"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { resolveMyReportDateRange } from "@/components/my-reports/hooks/use-my-report-config";
+import type { MyReportConfig } from "@/components/my-reports/hooks/use-my-report-config";
+import { toApiDateString } from "@/lib/reports/report-date-filter-utils";
+import { hasScreenFunction } from "@/lib/auth";
+import { MyReportTemplatePicker } from "@/components/my-reports/my-report-template-picker";
 
 function Phase3DisabledButton({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <Tooltip>
@@ -46,23 +50,23 @@ function Phase3DisabledButton({
       </TooltipTrigger>
       <TooltipContent>Coming in Phase 3</TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
 function buildOverviewHref(config: MyReportConfig | null): string {
-  if (!config) return "/reports/overview"
-  const { start, end } = resolveMyReportDateRange(config)
+  if (!config) return "/reports/overview";
+  const { start, end } = resolveMyReportDateRange(config);
   const params = new URLSearchParams({
     from: toApiDateString(start),
     to: toApiDateString(end),
-  })
+  });
   if (config.selectedCommissionTeamIds.length === 1) {
-    params.set("teamId", config.selectedCommissionTeamIds[0])
+    params.set("teamId", config.selectedCommissionTeamIds[0]);
   }
-  return `/reports/overview?${params.toString()}`
+  return `/reports/overview?${params.toString()}`;
 }
 
-export type MyReportTableViewMode = "flat" | "pivot"
+export type MyReportTableViewMode = "flat" | "pivot";
 
 export function MyReportTableViewModeToggle({
   tableViewMode,
@@ -70,10 +74,10 @@ export function MyReportTableViewModeToggle({
   className,
   disabled = false,
 }: {
-  tableViewMode: MyReportTableViewMode
-  onTableViewModeChange: (mode: MyReportTableViewMode) => void
-  className?: string
-  disabled?: boolean
+  tableViewMode: MyReportTableViewMode;
+  onTableViewModeChange: (mode: MyReportTableViewMode) => void;
+  className?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className={cn("flex gap-2", className)}>
@@ -106,30 +110,30 @@ export function MyReportTableViewModeToggle({
         Pivot
       </Button>
     </div>
-  )
+  );
 }
 
 export type MyReportsToolbarProps = {
-  reportTitle: string
-  isEditingTitle: boolean
-  onTitleChange: (value: string) => void
-  onEditingTitleChange: (editing: boolean) => void
-  editTableOpen: boolean
-  onEditTableToggle: () => void
-  chartsVisible: boolean
-  onChartsVisibleChange: (visible: boolean) => void
-  loading: boolean
-  hasPendingApply: boolean
-  onApply: () => void
-  onRefresh: () => void
-  canExport: boolean
-  exportDisabled: boolean
-  onExport: () => void
-  onSave: () => void
-  onLoadTemplate: (templateId: string) => void | Promise<void>
-  appliedConfig: MyReportConfig | null
-  orgId?: string | null
-}
+  reportTitle: string;
+  isEditingTitle: boolean;
+  onTitleChange: (value: string) => void;
+  onEditingTitleChange: (editing: boolean) => void;
+  editTableOpen: boolean;
+  onEditTableToggle: () => void;
+  chartsVisible: boolean;
+  onChartsVisibleChange: (visible: boolean) => void;
+  loading: boolean;
+  hasPendingApply: boolean;
+  onApply: () => void;
+  onRefresh: () => void;
+  canExport: boolean;
+  exportDisabled: boolean;
+  onExport: () => void;
+  onSave: () => void;
+  onLoadTemplate: (templateId: string) => void | Promise<void>;
+  appliedConfig: MyReportConfig | null;
+  orgId?: string | null;
+};
 
 export function MyReportsToolbar({
   reportTitle,
@@ -157,12 +161,12 @@ export function MyReportsToolbar({
   | "appliedConfig"
   | "orgId"
 >) {
-  const canViewOverviewReport = hasScreenFunction("s-overview-report", "view")
-  const canViewOrgDetails = hasScreenFunction("s-orgs", "view-details")
-  const canViewProfitPlan = hasScreenFunction("s-orgs", "view-profit-plan")
+  const canViewOverviewReport = hasScreenFunction("s-overview-report", "view");
+  const canViewOrgDetails = hasScreenFunction("s-orgs", "view-details");
+  const canViewProfitPlan = hasScreenFunction("s-orgs", "view-profit-plan");
 
   return (
-    <div className="flex items-center justify-between gap-3 px-6 pb-4">
+    <div className="flex flex-col items-stretch gap-3 px-4 pb-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 items-center gap-2">
         {isEditingTitle ? (
           <input
@@ -174,7 +178,9 @@ export function MyReportsToolbar({
             className="border-b-2 border-primary bg-transparent text-2xl font-semibold text-foreground outline-none"
           />
         ) : (
-          <h1 className="truncate text-2xl font-semibold text-foreground">{reportTitle}</h1>
+          <h1 className="truncate text-2xl font-semibold text-foreground">
+            {reportTitle}
+          </h1>
         )}
         <button
           type="button"
@@ -184,11 +190,16 @@ export function MyReportsToolbar({
           <Pencil className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="-mx-1 flex min-w-0 items-center gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:mx-0 lg:shrink-0 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden">
         {canViewOverviewReport && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                asChild
+              >
                 <Link href={buildOverviewHref(appliedConfig)}>
                   <ExternalLink className="h-4 w-4" />
                   Profit Overview
@@ -201,7 +212,12 @@ export function MyReportsToolbar({
         {orgId && canViewOrgDetails && canViewProfitPlan ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                asChild
+              >
                 <Link href={`/organizations/${orgId}?tab=profit-plan`}>
                   <ExternalLink className="h-4 w-4" />
                   Team plans
@@ -225,7 +241,7 @@ export function MyReportsToolbar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9"
+          className="h-9 w-9 shrink-0"
           disabled={!canExport || exportDisabled}
           onClick={onExport}
         >
@@ -237,14 +253,14 @@ export function MyReportsToolbar({
         <Button
           type="button"
           size="sm"
-          className="ml-2 h-9 bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="ml-1 h-9 shrink-0 bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90 lg:ml-2"
           onClick={onSave}
         >
           Save
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 export function MyReportsTableActionBar({
@@ -268,13 +284,16 @@ export function MyReportsTableActionBar({
   | "onRefresh"
 >) {
   return (
-    <div className="flex items-center justify-between border-b border-border bg-muted/50 px-6 py-2">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between">
+      <div className="-mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 [scrollbar-width:none] sm:mx-0 sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className={cn("h-9 gap-1.5", editTableOpen && "border-2 border-primary text-primary")}
+          className={cn(
+            "h-9 shrink-0 gap-1.5",
+            editTableOpen && "border-2 border-primary text-primary",
+          )}
           onClick={onEditTableToggle}
         >
           <Table2 className="h-4 w-4" />
@@ -285,7 +304,7 @@ export function MyReportsTableActionBar({
           variant="outline"
           size="sm"
           className={cn(
-            "h-9 gap-1.5",
+            "h-9 shrink-0 gap-1.5",
             chartsVisible && "border-2 border-primary text-primary",
           )}
           onClick={() => onChartsVisibleChange(!chartsVisible)}
@@ -293,20 +312,31 @@ export function MyReportsTableActionBar({
           <BarChart2 className="h-4 w-4" />
           Chart
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={onRefresh}>
-          <RefreshCw className={cn("h-4 w-4 text-muted-foreground", loading && "animate-spin")} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          onClick={onRefresh}
+        >
+          <RefreshCw
+            className={cn(
+              "h-4 w-4 text-muted-foreground",
+              loading && "animate-spin",
+            )}
+          />
         </Button>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         {hasPendingApply ? (
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="hidden text-xs sm:inline-flex">
             Unapplied changes
           </Badge>
         ) : null}
         <Button
           type="button"
           size="sm"
-          className="h-9 bg-primary hover:bg-primary/90"
+          className="flex gap-2"
           disabled={loading}
           onClick={onApply}
         >
@@ -314,5 +344,5 @@ export function MyReportsTableActionBar({
         </Button>
       </div>
     </div>
-  )
+  );
 }

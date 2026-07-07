@@ -1,49 +1,70 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, Plus, Users, UserCheck, Clock, Shield } from "lucide-react"
-import { UsersTable } from "./users-table"
-import { InviteUserModal } from "./invite-user-modal"
-import { useRoles } from "@/hooks/use-roles"
-import { TeamProfitPlanCard } from "@/components/teams/team-profit-plan-card"
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  Download,
+  Plus,
+  Users,
+  UserCheck,
+  Clock,
+  Shield,
+} from "lucide-react";
+import { UsersTable } from "./users-table";
+import { InviteUserModal } from "./invite-user-modal";
+import { useRoles } from "@/hooks/use-roles";
+import { TeamProfitPlanCard } from "@/components/teams/team-profit-plan-card";
 
 const statsData = [
   { label: "Total Users", value: 45, icon: Users, color: "text-slate-600" },
   { label: "Active", value: 42, icon: UserCheck, color: "text-green-600" },
-  { label: "Pending Invitations", value: 3, icon: Clock, color: "text-amber-600" },
+  {
+    label: "Pending Invitations",
+    value: 3,
+    icon: Clock,
+    color: "text-amber-600",
+  },
   { label: "Admins", value: 5, icon: Shield, color: "text-purple-600" },
-]
+];
 
 interface UserManagementContentProps {
-  teamId: string
+  teamId: string;
 }
 
 export function UserManagementContent({ teamId }: UserManagementContentProps) {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [roleFilter, setRoleFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [inviteModalOpen, setInviteModalOpen] = useState(false)
-  const [teamName, setTeamName] = useState<string | undefined>(undefined)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [teamName, setTeamName] = useState<string | undefined>(undefined);
 
-  const { data: rolesData } = useRoles()
-  const roles = rolesData || []
+  const { data: rolesData } = useRoles();
+  const roles = rolesData || [];
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900">Team Members</h1>
+          <h1 className="text-2xl font-bold text-foreground">Team Members</h1>
         </div>
-        <p className="text-sm text-slate-500 mt-1">
+
+        <p className="mt-1 text-sm text-muted-foreground">
           {teamName ? (
             <>
-              Manage <span className="font-semibold text-slate-900">{teamName}</span>
+              Manage{" "}
+              <span className="font-semibold text-foreground">{teamName}</span>
               {"'s team members and their access"}
             </>
           ) : (
@@ -55,14 +76,14 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
       <TeamProfitPlanCard teamId={teamId} teamName={teamName} />
 
       {/* Action Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row">
         <div className="flex flex-wrap gap-3">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by name or email..."
-              className="pl-9 w-64"
+              className="w-64 pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -100,36 +121,17 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
 
         <div className="flex gap-2">
           <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setInviteModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+
+          <Button onClick={() => setInviteModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
             Invite User
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards - Temporarily hidden */}
-      {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsData.map((stat) => (
-          <Card key={stat.label} className="border-slate-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">{stat.label}</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`p-2 rounded-lg bg-slate-100 ${stat.color}`}>
-                  <stat.icon className="w-5 h-5" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div> */}
-
-      {/* Users Table */}
       <UsersTable
         searchQuery={searchQuery}
         roleFilter={roleFilter}
@@ -139,8 +141,10 @@ export function UserManagementContent({ teamId }: UserManagementContentProps) {
         onInviteClick={() => setInviteModalOpen(true)}
       />
 
-      {/* Invite User Modal */}
-      <InviteUserModal open={inviteModalOpen} onOpenChange={setInviteModalOpen} />
+      <InviteUserModal
+        open={inviteModalOpen}
+        onOpenChange={setInviteModalOpen}
+      />
     </div>
-  )
+  );
 }

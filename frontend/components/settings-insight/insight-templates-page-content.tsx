@@ -168,8 +168,8 @@ export function InsightTemplatesPageContent() {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1920px] mx-auto">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="mx-auto flex w-full max-w-[1920px] flex-col gap-6 px-4 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <Link href="/apps" className="hover:text-foreground">
           Apps
         </Link>
@@ -178,11 +178,11 @@ export function InsightTemplatesPageContent() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+        <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold text-foreground">
           <Sparkles className="w-7 h-7 text-primary" />
           AI Insight
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Cấu trúc insight theo loại app và kho mẫu context áp dụng cho từng app.
         </p>
       </div>
@@ -190,26 +190,26 @@ export function InsightTemplatesPageContent() {
       <Tabs
         value={mainTab}
         onValueChange={(v) => setMainTab(v as "sections" | "context")}
-        className="w-full gap-6"
+        className="w-full min-w-0 gap-6"
       >
-        <TabsList className={`grid w-full max-w-md grid-cols-1 sm:max-w-lg ${canManage ? "sm:grid-cols-2" : ""}`}>
+        <TabsList className={`grid w-full gap-2 rounded-xl p-1 sm:w-fit sm:max-w-lg ${canManage ? "grid-cols-2 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-1"}`}>
           {canManage ? (
-            <TabsTrigger value="sections" className="gap-2">
-              <Sparkles className="h-4 w-4" />
+            <TabsTrigger value="sections" className="min-w-0 gap-2 px-3 text-center">
+              <Sparkles className="hidden h-4 w-4 sm:block" />
               Insight templates
             </TabsTrigger>
           ) : null}
-          <TabsTrigger value="context" className="gap-2">
-            <Brain className="h-4 w-4" />
+          <TabsTrigger value="context" className="min-w-0 gap-2 px-3 text-center">
+            <Brain className="hidden h-4 w-4 sm:block" />
             Kho context AI
           </TabsTrigger>
         </TabsList>
 
         {canManage ? (
-          <TabsContent value="sections" className="mt-0 flex flex-col gap-6">
+          <TabsContent value="sections" className="mt-0 flex min-w-0 flex-col gap-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-end">
               <Button
-                className="bg-primary hover:bg-primary/90 shrink-0 sm:ml-auto"
+                className="w-full shrink-0 bg-primary hover:bg-primary/90 sm:ml-auto sm:w-auto"
                 onClick={() => {
                   setEditing(null)
                   setShowCreate(true)
@@ -253,7 +253,7 @@ export function InsightTemplatesPageContent() {
         </>
       ) : (
         <>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {templates.map((t) => {
             const { category, body } = unpackDescription(t.description ?? "")
             const cat = category || "Custom"
@@ -266,7 +266,7 @@ export function InsightTemplatesPageContent() {
                       <span className="text-2xl shrink-0">{emoji}</span>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold text-lg text-foreground truncate">{t.name}</h3>
+                          <h3 className="min-w-0 truncate text-lg font-semibold text-foreground">{t.name}</h3>
                           {t.isDefault ? (
                             <Badge className="border-0 bg-primary/10 text-primary hover:bg-primary/10 shrink-0">
                               Default
@@ -293,15 +293,15 @@ export function InsightTemplatesPageContent() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-border">
-                    <Button variant="outline" size="sm" onClick={() => setEditing(t)}>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setEditing(t)}>
                       <Edit2 className="w-3.5 h-3.5 mr-1.5" />
                       Sửa
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => void handleDuplicate(t)}>
+                    <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={() => void handleDuplicate(t)}>
                       <Copy className="w-3.5 h-3.5 mr-1.5" />
                       Nhân bản
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setPreviewing(t)}>
+                    <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={() => setPreviewing(t)}>
                       <Eye className="w-3.5 h-3.5 mr-1.5" />
                       Preview
                     </Button>

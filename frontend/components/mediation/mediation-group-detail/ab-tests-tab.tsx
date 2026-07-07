@@ -57,15 +57,15 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
   if (abTests.length === 0) {
     // Empty State
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-          <FlaskConical className="w-10 h-10 text-purple-500" />
+      <div className="flex flex-col items-center justify-center px-4 py-16">
+        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-950/50">
+          <FlaskConical className="h-10 w-10 text-purple-600 dark:text-purple-300" />
         </div>
-        <h3 className="text-xl font-semibold text-slate-900 mb-2">No A/B Tests Yet</h3>
-        <p className="text-sm text-slate-500 text-center max-w-md mb-6">
+        <h3 className="mb-2 text-center text-xl font-semibold text-foreground">No A/B Tests Yet</h3>
+        <p className="mb-6 max-w-md text-center text-sm text-muted-foreground">
           Run an A/B test to validate waterfall optimizations before applying them to your production traffic.
         </p>
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={onCreateTest}>
+        <Button onClick={onCreateTest}>
           Create First A/B Test
         </Button>
       </div>
@@ -75,13 +75,13 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">A/B Tests</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-semibold text-foreground">A/B Tests</h2>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={onCreateTest} disabled={hasRunningTest}>
+              <span className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto" onClick={onCreateTest} disabled={hasRunningTest}>
                   Create New Test
                 </Button>
               </span>
@@ -98,35 +98,35 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
       {/* Test Cards */}
       <div className="space-y-4">
         {abTests.map((test) => (
-          <Card key={test.id} className="border-slate-200">
+          <Card key={test.id} className="border-border">
             <CardContent className="p-4">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 {/* Icon */}
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
                     test.status === "running"
-                      ? "bg-purple-100"
+                      ? "bg-purple-100 dark:bg-purple-950/50"
                       : test.status === "completed"
-                        ? "bg-green-100"
-                        : "bg-slate-100"
+                        ? "bg-green-100 dark:bg-green-950/50"
+                        : "bg-muted"
                   }`}
                 >
-                  {test.status === "running" && <FlaskConical className="w-5 h-5 text-purple-600" />}
-                  {test.status === "completed" && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                  {test.status === "cancelled" && <XCircle className="w-5 h-5 text-slate-500" />}
+                  {test.status === "running" && <FlaskConical className="h-5 w-5 text-purple-600 dark:text-purple-300" />}
+                  {test.status === "completed" && <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-300" />}
+                  {test.status === "cancelled" && <XCircle className="h-5 w-5 text-muted-foreground" />}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-slate-900">{test.name}</h3>
+                    <h3 className="text-sm font-semibold text-foreground">{test.name}</h3>
                     <Badge
                       className={
                         test.status === "running"
-                          ? "bg-purple-100 text-purple-700 border-0"
+                          ? "border-0 bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300"
                           : test.status === "completed"
-                            ? "bg-green-100 text-green-700 border-0"
-                            : "bg-slate-100 text-slate-600 border-0"
+                            ? "border-0 bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300"
+                            : "border-0 bg-muted text-muted-foreground"
                       }
                     >
                       {test.status === "running"
@@ -138,7 +138,7 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
                   </div>
 
                   {/* Info line */}
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {test.status === "running" &&
                       `Started: ${test.startDate} • Duration: ${test.duration} days • Traffic: ${test.trafficSplit}`}
                     {test.status === "completed" &&
@@ -150,29 +150,29 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
                   {/* Running test details */}
                   {test.status === "running" && (
                     <>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-slate-500">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
                           Day {test.currentDay} of {test.duration}
                         </span>
                         <Progress
                           value={(test.currentDay / test.duration) * 100}
-                          className="h-1.5 w-32 bg-slate-200 [&>div]:bg-purple-500"
+                          className="h-1.5 w-32 bg-muted [&>div]:bg-purple-500"
                         />
                       </div>
-                      <div className="mt-3 p-3 bg-slate-50 rounded-lg">
-                        <p className="text-xs text-slate-500 mb-1">Early Results:</p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-slate-600">
+                      <div className="mt-3 rounded-lg bg-muted/60 p-3">
+                        <p className="mb-1 text-xs text-muted-foreground">Early Results:</p>
+                        <div className="flex flex-col gap-1 text-sm lg:flex-row lg:items-center lg:gap-4">
+                          <span className="text-muted-foreground">
                             Variant A (Current):{" "}
-                            <span className="font-medium text-slate-900">${test.variantA.ecpm} eCPM</span>
+                            <span className="font-medium text-foreground">${test.variantA.ecpm} eCPM</span>
                           </span>
-                          <span className="text-slate-600">
+                          <span className="text-muted-foreground">
                             Variant B (Optimized):{" "}
-                            <span className="font-medium text-slate-900">${test.variantB.ecpm} eCPM</span>
+                            <span className="font-medium text-foreground">${test.variantB.ecpm} eCPM</span>
                           </span>
                         </div>
-                        <div className="flex items-center gap-1 mt-1 text-green-600 text-sm">
-                          <TrendingUp className="w-3.5 h-3.5" />
+                        <div className="mt-1 flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+                          <TrendingUp className="h-3.5 w-3.5" />
                           <span>Variant B leading by +{test.leadingPercentage}%</span>
                         </div>
                       </div>
@@ -182,15 +182,15 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
                   {/* Completed test details */}
                   {test.status === "completed" && (
                     <div className="mt-2 space-y-1">
-                      <p className="text-sm text-slate-700">
-                        <span className="font-medium text-green-600">Variant {test.winner} won</span> with{" "}
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-green-600 dark:text-green-400">Variant {test.winner} won</span> with{" "}
                         {test.confidence}% confidence
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Variant A: ${test.variantA.ecpm} eCPM • Variant B: ${test.variantB.ecpm} eCPM (+
                         {test.winnerPercentage}%)
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Applied Variant {test.winner} on {test.appliedOn}
                       </p>
                     </div>
@@ -198,17 +198,17 @@ export function ABTestsTab({ onCreateTest, hasRunningTest }: ABTestsTabProps) {
 
                   {/* Cancelled test details */}
                   {test.status === "cancelled" && (
-                    <p className="text-sm text-slate-500 mt-2">Reason: {test.cancelReason}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Reason: {test.cancelReason}</p>
                   )}
                 </div>
 
                 {/* Action */}
                 <Link
                   href={`/mediation/tests/${test.id}`}
-                  className="flex items-center gap-1 text-sm text-blue-600 hover:underline flex-shrink-0"
+                  className="flex flex-shrink-0 items-center gap-1 text-sm text-primary hover:underline sm:pt-0.5"
                 >
                   View Details
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             </CardContent>

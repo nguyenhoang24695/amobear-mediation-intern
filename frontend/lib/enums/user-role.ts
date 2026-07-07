@@ -72,9 +72,16 @@ export function normalizeUserRoles(
   roles?: string[] | null,
 ): string[] {
   if (roles && roles.length > 0) {
-    return Array.from(new Set(roles.filter(Boolean)));
+    return Array.from(
+      new Set(
+        roles
+          .map((item) => item?.trim())
+          .filter((item): item is string => Boolean(item)),
+      ),
+    );
   }
-  return role ? [role] : [];
+  const normalizedRole = role?.trim();
+  return normalizedRole ? [normalizedRole] : [];
 }
 
 export function hasSuperAdminRole(

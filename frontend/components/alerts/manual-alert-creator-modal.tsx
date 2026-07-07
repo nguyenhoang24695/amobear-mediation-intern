@@ -1141,8 +1141,8 @@ export function ManualAlertCreatorModal({
         onOpenChange(next)
       }}
     >
-      <DialogContent className="flex max-h-[min(85vh,900px)] w-[90vw] max-w-[90vw] flex-col gap-0 overflow-hidden p-6 md:w-[60vw] md:!max-w-[60vw]">
-        <div className="shrink-0 space-y-2 border-b border-slate-100 pb-3">
+      <DialogContent className="flex max-h-[min(85vh,900px)] w-[90vw] max-w-[90vw] flex-col gap-0 overflow-hidden bg-background p-6 text-foreground md:w-[60vw] md:!max-w-[60vw]">
+        <div className="shrink-0 space-y-2 border-b border-border pb-3">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-xl">
               {isEdit ? "Edit Alert Rule" : isClone ? "Create Alert from Template" : "Create Alert Rule"}
@@ -1155,15 +1155,15 @@ export function ManualAlertCreatorModal({
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     s === step
-                      ? "bg-indigo-600 text-white"
+                      ? "bg-primary text-primary-foreground"
                       : s < step
-                        ? "bg-green-500 text-white"
-                        : "bg-slate-200 text-slate-500"
+                        ? "bg-emerald-600 text-white dark:bg-emerald-500"
+                        : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {s < step ? <Check className="w-4 h-4" /> : s}
                 </div>
-                <span className={`text-sm ${s === step ? "text-slate-900 font-medium" : "text-slate-500"}`}>
+                <span className={`text-sm ${s === step ? "font-medium text-foreground" : "text-muted-foreground"}`}>
                   {s === 1
                     ? "Scope"
                     : s === 2
@@ -1172,7 +1172,7 @@ export function ManualAlertCreatorModal({
                         ? "Notifications"
                         : "Final"}
                 </span>
-                {s < 4 && <ChevronRight className="w-4 h-4 text-slate-300" />}
+                {s < 4 && <ChevronRight className="w-4 h-4 text-muted-foreground/50" />}
               </div>
             ))}
           </div>
@@ -1190,7 +1190,7 @@ export function ManualAlertCreatorModal({
                       step1Error && "ring-2 ring-red-500/80 ring-offset-2"
                     )}
                   >
-                    <label className="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 border-slate-200">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-3 hover:bg-accent/60">
                       <Checkbox
                         checked={isAllApps}
                         onCheckedChange={(checked) => {
@@ -1208,7 +1208,7 @@ export function ManualAlertCreatorModal({
                     {!isAllApps && (
                       <>
                         <div className="relative">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             className="pl-9"
                             placeholder="Search by app name or appId"
@@ -1217,44 +1217,44 @@ export function ManualAlertCreatorModal({
                           />
                         </div>
 
-                        <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-2">
+                        <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2">
                           {appsLoading ? (
-                            <div className="text-sm text-slate-500 py-6 flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                               <Loader2 className="w-4 h-4 animate-spin" />
                               Loading apps...
                             </div>
                           ) : filteredApps.length === 0 ? (
-                            <div className="text-sm text-slate-500 py-6 text-center">No app found.</div>
+                            <div className="py-6 text-center text-sm text-muted-foreground">No app found.</div>
                           ) : (
                             filteredApps.map((app) => {
                               const checked = formData.selectedApps.includes(app.id)
                               return (
                                 <label
                                   key={app.id}
-                                  className={`flex items-start gap-2 p-2 border rounded-md cursor-pointer hover:bg-slate-50 ${
-                                    checked ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                                  className={`flex items-start gap-2 rounded-md border p-2 cursor-pointer hover:bg-accent/60 ${
+                                    checked ? "border-primary bg-primary/10" : "border-border bg-background"
                                   }`}
                                 >
                                   <Checkbox
                                     checked={checked}
                                     onCheckedChange={(next) => toggleSpecificApp(app.id, next === true)}
                                   />
-                                  <Avatar className="h-8 w-8 shrink-0 rounded-md">
+                                  <Avatar className="h-8 w-8 shrink-0 rounded-md border border-border">
                                     <AvatarImage src={app.iconUri || "/placeholder.svg"} alt={app.name} className="object-cover" />
-                                    <AvatarFallback className="rounded-md text-[10px] bg-slate-100 text-slate-600">
+                                    <AvatarFallback className="rounded-md bg-muted text-[10px] text-muted-foreground">
                                       {app.name.slice(0, 1).toUpperCase()}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 min-w-0">
-                                      <p className="text-sm font-medium text-slate-900 truncate">{app.name}</p>
+                                      <p className="truncate text-sm font-medium text-foreground">{app.name}</p>
                                       {app.platform && (
-                                        <Badge variant="outline" className="text-[10px] h-5 shrink-0 text-slate-600">
+                                        <Badge variant="outline" className="h-5 shrink-0 text-[10px] text-muted-foreground">
                                           {app.platform}
                                         </Badge>
                                       )}
                                     </div>
-                                    <p className="text-xs text-slate-500 font-mono truncate">{app.id}</p>
+                                    <p className="truncate font-mono text-xs text-muted-foreground">{app.id}</p>
                                   </div>
                                 </label>
                               )
@@ -1271,10 +1271,10 @@ export function ManualAlertCreatorModal({
                   )}
                 </div>
 
-                <div className="space-y-3 pt-4 border-t border-slate-200">
+                <div className="space-y-3 border-t border-border pt-4">
                   <div>
                     <Label>Order alerts by metric</Label>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Optional. Sorts processing order per app using each app&apos;s latest day in the evaluation window
                       (alerts, Slack batches, etc.). Leave default to keep loader order.
                     </p>
@@ -1288,7 +1288,7 @@ export function ManualAlertCreatorModal({
                       }))
                     }
                   >
-                    <SelectTrigger className="w-full max-w-md bg-white">
+                    <SelectTrigger className="w-full max-w-md bg-background">
                       <SelectValue placeholder="Default order" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1308,16 +1308,16 @@ export function ManualAlertCreatorModal({
                       className="flex flex-wrap gap-3"
                     >
                       <label
-                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm ${
-                          formData.scopeOrderByDirection === "asc" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm ${
+                          formData.scopeOrderByDirection === "asc" ? "border-primary bg-primary/10" : "border-border"
                         }`}
                       >
                         <RadioGroupItem value="asc" id="scope-order-asc" />
                         <span>ASC (low → high)</span>
                       </label>
                       <label
-                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm ${
-                          formData.scopeOrderByDirection === "desc" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer text-sm ${
+                          formData.scopeOrderByDirection === "desc" ? "border-primary bg-primary/10" : "border-border"
                         }`}
                       >
                         <RadioGroupItem value="desc" id="scope-order-desc" />
@@ -1350,7 +1350,7 @@ export function ManualAlertCreatorModal({
                     >
                       <label
                         className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
-                          cloneConditionMode === "keep" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                          cloneConditionMode === "keep" ? "border-primary bg-primary/10" : "border-border bg-background"
                         }`}
                       >
                         <RadioGroupItem value="keep" id="clone-cond-keep" />
@@ -1358,7 +1358,7 @@ export function ManualAlertCreatorModal({
                       </label>
                       <label
                         className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
-                          cloneConditionMode === "customize" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                          cloneConditionMode === "customize" ? "border-primary bg-primary/10" : "border-border bg-background"
                         }`}
                       >
                         <RadioGroupItem value="customize" id="clone-cond-customize" />
@@ -1370,9 +1370,9 @@ export function ManualAlertCreatorModal({
 
                 {isClone && cloneConditionMode === "keep" && (
                   <div className="space-y-2">
-                    <Label className="text-slate-700">Mô tả điều kiện</Label>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{cloneTemplateConditionDescription}</p>
+                    <Label className="text-foreground">Mô tả điều kiện</Label>
+                    <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+                      <p className="whitespace-pre-wrap text-sm text-foreground">{cloneTemplateConditionDescription}</p>
                     </div>
                   </div>
                 )}
@@ -1382,7 +1382,7 @@ export function ManualAlertCreatorModal({
                 <div className="flex items-center gap-2">
                   <Label>Combine conditions</Label>
                   {metricsCatalogLoading && (
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       Loading catalog…
                     </span>
@@ -1397,7 +1397,7 @@ export function ManualAlertCreatorModal({
                 >
                   <label
                     className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
-                      formData.conditionLogic === "all" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                      formData.conditionLogic === "all" ? "border-primary bg-primary/10" : "border-border bg-background"
                     }`}
                   >
                     <RadioGroupItem value="all" />
@@ -1405,7 +1405,7 @@ export function ManualAlertCreatorModal({
                   </label>
                   <label
                     className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
-                      formData.conditionLogic === "any" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                      formData.conditionLogic === "any" ? "border-primary bg-primary/10" : "border-border bg-background"
                     }`}
                   >
                     <RadioGroupItem value="any" />
@@ -1413,7 +1413,7 @@ export function ManualAlertCreatorModal({
                   </label>
                   <label
                     className={`flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer ${
-                      formData.conditionLogic === "always_true" ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                      formData.conditionLogic === "always_true" ? "border-primary bg-primary/10" : "border-border bg-background"
                     }`}
                   >
                     <RadioGroupItem value="always_true" />
@@ -1421,7 +1421,7 @@ export function ManualAlertCreatorModal({
                   </label>
                 </RadioGroup>
                 {formData.conditionLogic === "always_true" && (
-                  <p className="text-sm text-slate-600 -mt-2">
+                  <p className="-mt-2 text-sm text-muted-foreground">
                     Job sẽ tạo alert mỗi lần chạy cho từng app trong phạm vi có dữ liệu, không kiểm tra điều kiện metric.
                     Metric mặc định để tải dữ liệu / hiển thị theo loại rule (ví dụ MANUAL → revenue).
                   </p>
@@ -1435,7 +1435,7 @@ export function ManualAlertCreatorModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="bg-white"
+                    className="bg-background"
                     onClick={() => {
                       setStep2ListError(undefined)
                       setFormData((prev) => ({ ...prev, conditions: [...prev.conditions, emptyConditionRow()] }))
@@ -1486,10 +1486,10 @@ export function ManualAlertCreatorModal({
                       }))
                     }
                     return (
-                      <Card key={c.id} className="border-slate-200 shadow-sm">
+                      <Card key={c.id} className="border-border bg-card shadow-sm">
                         <CardContent className="p-4 space-y-4">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold text-slate-800">Condition {idx + 1}</span>
+                            <span className="text-sm font-semibold text-foreground">Condition {idx + 1}</span>
                             {formData.conditions.length > 1 && (
                               <Button type="button" variant="ghost" size="sm" className="text-red-600" onClick={removeRow}>
                                 <Trash2 className="w-4 h-4" />
@@ -1518,7 +1518,7 @@ export function ManualAlertCreatorModal({
                               </p>
                             )}
                           </div>
-                          <div className="border-t border-slate-100 pt-4 space-y-3">
+                          <div className="border-t border-border pt-4 space-y-3">
                             <Label>Condition type *</Label>
                             <div className="grid gap-4 sm:grid-cols-[minmax(0,18.5rem)_1fr] sm:gap-7 sm:items-start">
                               <RadioGroup
@@ -1529,14 +1529,14 @@ export function ManualAlertCreatorModal({
                                 {conditionTypes.map((ct) => (
                                   <label
                                     key={ct.value}
-                                    className={`flex items-start gap-2.5 p-2.5 border rounded-lg cursor-pointer hover:bg-slate-50 ${
-                                      c.conditionType === ct.value ? "border-indigo-500 bg-indigo-50" : "border-slate-200"
+                                    className={`flex items-start gap-2.5 rounded-lg border p-2.5 cursor-pointer hover:bg-accent/60 ${
+                                      c.conditionType === ct.value ? "border-primary bg-primary/10" : "border-border bg-background"
                                     }`}
                                   >
                                     <RadioGroupItem value={ct.value} className="mt-0.5 shrink-0" />
                                     <div className="min-w-0">
-                                      <p className="text-sm font-medium text-slate-900 leading-snug">{ct.label}</p>
-                                      <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{ct.description}</p>
+                                      <p className="text-sm font-medium text-foreground leading-snug">{ct.label}</p>
+                                      <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{ct.description}</p>
                                     </div>
                                   </label>
                                 ))}
@@ -1663,11 +1663,11 @@ export function ManualAlertCreatorModal({
                   <RadioGroup
                     value={formData.severity}
                     onValueChange={(v) => setFormData({ ...formData, severity: v })}
-                    className="flex gap-4"
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-3"
                   >
                     <label
-                      className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer ${
-                        formData.severity === "critical" ? "border-red-500 bg-red-50" : "border-slate-200"
+                      className={`flex min-w-0 items-center gap-2 rounded-lg border p-3 cursor-pointer ${
+                        formData.severity === "critical" ? "border-red-500 bg-red-500/10" : "border-border bg-background"
                       }`}
                     >
                       <RadioGroupItem value="critical" />
@@ -1675,8 +1675,8 @@ export function ManualAlertCreatorModal({
                       <span className="text-sm">Critical</span>
                     </label>
                     <label
-                      className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer ${
-                        formData.severity === "warning" ? "border-amber-500 bg-amber-50" : "border-slate-200"
+                      className={`flex min-w-0 items-center gap-2 rounded-lg border p-3 cursor-pointer ${
+                        formData.severity === "warning" ? "border-amber-500 bg-amber-500/10" : "border-border bg-background"
                       }`}
                     >
                       <RadioGroupItem value="warning" />
@@ -1684,8 +1684,8 @@ export function ManualAlertCreatorModal({
                       <span className="text-sm">Warning</span>
                     </label>
                     <label
-                      className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer ${
-                        formData.severity === "info" ? "border-blue-500 bg-blue-50" : "border-slate-200"
+                      className={`flex min-w-0 items-center gap-2 rounded-lg border p-3 cursor-pointer ${
+                        formData.severity === "info" ? "border-blue-500 bg-blue-500/10" : "border-border bg-background"
                       }`}
                     >
                       <RadioGroupItem value="info" />
@@ -1702,14 +1702,14 @@ export function ManualAlertCreatorModal({
                 <div className="space-y-3">
                   <Label>Notification Channels</Label>
                   {isMyPrivateRule && (
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Telegram destinations nhập ở dưới. Slack và email khi gửi lấy từ{" "}
-                      <span className="font-medium text-slate-800">My Profile</span> — không nhập webhook/danh sách email
+                      <span className="font-medium text-foreground">My Profile</span> — không nhập webhook/danh sách email
                       trên rule.
                     </p>
                   )}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                       <span className="text-sm">In-app Notification</span>
                       <Switch
                         checked={formData.channels.inApp}
@@ -1718,7 +1718,7 @@ export function ManualAlertCreatorModal({
                     </div>
                     {isMyPrivateRule ? (
                       <>
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                        <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm">Telegram</span>
                           </div>
@@ -1733,17 +1733,17 @@ export function ManualAlertCreatorModal({
                         {formData.channels.telegram && (
                           <div
                             className={cn(
-                              "rounded-lg border bg-slate-50 p-3 space-y-3",
-                              step3Errors.telegram ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200",
+                              "space-y-3 rounded-lg border bg-muted/30 p-3",
+                              step3Errors.telegram ? "border-red-500 ring-2 ring-red-500/25" : "border-border",
                             )}
                           >
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <p className="text-sm font-medium text-slate-900">Telegram destinations</p>
+                              <p className="text-sm font-medium text-foreground">Telegram destinations</p>
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="bg-white"
+                                className="bg-background"
                                 onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}
                               >
                                 <Plus className="w-4 h-4 mr-1" />
@@ -1753,7 +1753,7 @@ export function ManualAlertCreatorModal({
 
                             {telegramPresets.length > 0 ? (
                               <div className="space-y-1.5">
-                                <p className="text-xs font-medium text-slate-600">Group/Channel đã lưu — bấm để thêm</p>
+                                <p className="text-xs font-medium text-muted-foreground">Group/Channel đã lưu — bấm để thêm</p>
                                 <div className="flex flex-wrap gap-2">
                                   {telegramPresets.map((p) => {
                                     const token = telegramPresetToken(p)
@@ -1786,8 +1786,8 @@ export function ManualAlertCreatorModal({
                                         className={cn(
                                           "inline-flex max-w-full items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                                           already
-                                            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                            : "cursor-pointer border-indigo-200 bg-white text-indigo-900 hover:border-indigo-400 hover:bg-indigo-50",
+                                            ? "cursor-not-allowed border-border bg-muted text-muted-foreground"
+                                            : "cursor-pointer border-primary/30 bg-background text-foreground hover:border-primary hover:bg-primary/10",
                                         )}
                                       >
                                         <span className="truncate">{label}</span>
@@ -1844,7 +1844,7 @@ export function ManualAlertCreatorModal({
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        className="bg-white shrink-0"
+                                        className="bg-background shrink-0"
                                         disabled={savingTelegramPresetRowId === row.id}
                                         onClick={() => void saveTelegramPresetFromRow(row)}
                                         title="Save this destination as a preset in My Profile"
@@ -1878,7 +1878,7 @@ export function ManualAlertCreatorModal({
                             )}
                           </div>
                         )}
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                        <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm">Slack</span>
                           </div>
@@ -1890,17 +1890,17 @@ export function ManualAlertCreatorModal({
                             }}
                           />
                         </div>
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                        <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm">Lark</span>
-                            <span className="text-xs text-slate-500">Chưa hỗ trợ cho My Alerts</span>
+                            <span className="text-xs text-muted-foreground">Chưa hỗ trợ cho My Alerts</span>
                           </div>
                           <Switch
                             checked={formData.channels.lark}
                             onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, lark: c } })}
                           />
                         </div>
-                        <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                        <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm">Email</span>
                           </div>
@@ -1916,7 +1916,7 @@ export function ManualAlertCreatorModal({
                     ) : null}
                     {!isMyPrivateRule ? (
                       <>
-                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                       <span className="text-sm">Telegram</span>
                       <Switch
                         checked={formData.channels.telegram}
@@ -1929,13 +1929,13 @@ export function ManualAlertCreatorModal({
                     {formData.channels.telegram && (
                       <div
                         className={cn(
-                          "rounded-lg border bg-slate-50 p-3 space-y-3",
-                          step3Errors.telegram ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200"
+                          "space-y-3 rounded-lg border bg-muted/30 p-3",
+                          step3Errors.telegram ? "border-red-500 ring-2 ring-red-500/25" : "border-border"
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-slate-900">Telegram destinations</p>
-                          <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}>
+                          <p className="text-sm font-medium text-foreground">Telegram destinations</p>
+                          <Button type="button" variant="outline" size="sm" className="bg-background" onClick={() => setTelegramRows((prev) => [...prev, emptyTelegramRow()])}>
                             <Plus className="w-4 h-4 mr-1" />
                             Add
                           </Button>
@@ -1966,7 +1966,7 @@ export function ManualAlertCreatorModal({
                         )}
                       </div>
                     )}
-                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                       <span className="text-sm">Slack</span>
                       <Switch
                         checked={formData.channels.slack}
@@ -1979,14 +1979,14 @@ export function ManualAlertCreatorModal({
                     {formData.channels.slack && (
                       <div
                         className={cn(
-                          "rounded-lg border bg-slate-50 p-3 space-y-3",
-                          step3Errors.slack ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200"
+                          "space-y-3 rounded-lg border bg-muted/30 p-3",
+                          step3Errors.slack ? "border-red-500 ring-2 ring-red-500/25" : "border-border"
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-slate-900">Slack webhook URLs</p>
-                          <p className="text-xs text-slate-500">Tùy chọn — có thể để trống (ví dụ chỉ dùng webhook trong My Profile).</p>
-                          <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setSlackRows((prev) => [...prev, emptySlackRow()])}>
+                          <p className="text-sm font-medium text-foreground">Slack webhook URLs</p>
+                          <p className="text-xs text-muted-foreground">Tùy chọn — có thể để trống (ví dụ chỉ dùng webhook trong My Profile).</p>
+                          <Button type="button" variant="outline" size="sm" className="bg-background" onClick={() => setSlackRows((prev) => [...prev, emptySlackRow()])}>
                             <Plus className="w-4 h-4 mr-1" />
                             Add
                           </Button>
@@ -2012,14 +2012,14 @@ export function ManualAlertCreatorModal({
                         )}
                       </div>
                     )}
-                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                       <span className="text-sm">Lark</span>
                       <Switch
                         checked={formData.channels.lark}
                         onCheckedChange={(c) => setFormData({ ...formData, channels: { ...formData.channels, lark: c } })}
                       />
                     </div>
-                    <div className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-background p-3">
                       <span className="text-sm">Email</span>
                       <Switch
                         checked={formData.channels.email}
@@ -2032,13 +2032,13 @@ export function ManualAlertCreatorModal({
                     {formData.channels.email && (
                       <div
                         className={cn(
-                          "rounded-lg border bg-slate-50 p-3 space-y-3",
-                          step3Errors.email ? "border-red-500 ring-2 ring-red-500/25" : "border-slate-200"
+                          "space-y-3 rounded-lg border bg-muted/30 p-3",
+                          step3Errors.email ? "border-red-500 ring-2 ring-red-500/25" : "border-border"
                         )}
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-slate-900">Email recipients</p>
-                          <Button type="button" variant="outline" size="sm" className="bg-white" onClick={() => setEmailRows((prev) => [...prev, emptyEmailRow()])}>
+                          <p className="text-sm font-medium text-foreground">Email recipients</p>
+                          <Button type="button" variant="outline" size="sm" className="bg-background" onClick={() => setEmailRows((prev) => [...prev, emptyEmailRow()])}>
                             <Plus className="w-4 h-4 mr-1" />
                             Add
                           </Button>
@@ -2116,7 +2116,7 @@ export function ManualAlertCreatorModal({
                             step3Errors.frequency && "border-red-500 focus-visible:ring-red-500/30"
                           )}
                         />
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           Nếu nhập: chỉ đánh giá lại cho cùng app khi alert gần nhất của rule này đã cách hiện tại
                           &gt; số phút này (theo thời điểm tạo alert).
                         </p>
@@ -2149,7 +2149,7 @@ export function ManualAlertCreatorModal({
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           Giờ theo múi GMT+7 (UTC+7). Job chỉ đánh giá trong đúng khung giờ đó;
                         </p>
                       </>
@@ -2171,7 +2171,7 @@ export function ManualAlertCreatorModal({
                     />
                   </div>
                   {formData.autoResolve && (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted-foreground">
                       Alert will auto-resolve when metric recovers to normal range
                     </p>
                   )}
@@ -2181,7 +2181,7 @@ export function ManualAlertCreatorModal({
 
             {step === 4 && (
               <div className="space-y-4">
-                <p className="text-xs text-slate-500">Đặt tên và xem lại cấu hình trước khi lưu.</p>
+                <p className="text-xs text-muted-foreground">Đặt tên và xem lại cấu hình trước khi lưu.</p>
                 <div className="space-y-2">
                   <Label>Alert Name</Label>
                   <Input
@@ -2190,12 +2190,12 @@ export function ManualAlertCreatorModal({
                     onChange={(e) => setFormData({ ...formData, alertName: e.target.value })}
                   />
                 </div>
-                <Card className="border-amber-300 bg-amber-50">
+                <Card className="border-border bg-muted/30">
                   <CardContent className="p-4">
-                    <h3 className="font-semibold text-slate-900 mb-3">Alert Preview</h3>
+                    <h3 className="mb-3 font-semibold text-foreground">Alert Preview</h3>
                     <div className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                       <div className="md:col-span-2 xl:col-span-4">
-                        <span className="text-slate-500">
+                        <span className="text-muted-foreground">
                           Conditions (
                           {formData.conditionLogic === "always_true"
                             ? "always true"
@@ -2204,7 +2204,7 @@ export function ManualAlertCreatorModal({
                               : "AND"}
                           ):
                         </span>
-                        <p className="mt-1 text-sm font-medium text-slate-800 break-words leading-snug">
+                        <p className="mt-1 break-words text-sm font-medium leading-snug text-foreground">
                           {formData.conditionLogic === "always_true"
                             ? "Không có điều kiện metric — job luôn tạo alert cho mỗi app trong phạm vi có dữ liệu."
                             : formData.conditions
@@ -2215,7 +2215,7 @@ export function ManualAlertCreatorModal({
                         </p>
                       </div>
                       <div>
-                        <span className="text-slate-500">Apps:</span>
+                        <span className="text-muted-foreground">Apps:</span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {formData.selectedApps.map((appId) => (
                             <Badge key={appId} variant="secondary" className="text-xs max-w-full">
@@ -2226,15 +2226,15 @@ export function ManualAlertCreatorModal({
                       </div>
                       {formData.scopeOrderByMetric.trim() !== "" && (
                         <div className="md:col-span-2 xl:col-span-4">
-                          <span className="text-slate-500">App alert order:</span>
-                          <p className="mt-1 text-sm font-medium text-slate-800">
+                          <span className="text-muted-foreground">App alert order:</span>
+                          <p className="mt-1 text-sm font-medium text-foreground">
                             {metricLabelFromCatalog(metricsCatalog ?? null, formData.scopeOrderByMetric)} ·{" "}
                             {formData.scopeOrderByDirection.toUpperCase()}
                           </p>
                         </div>
                       )}
                       <div>
-                        <span className="text-slate-500">Severity:</span>
+                        <span className="text-muted-foreground">Severity:</span>
                         <Badge
                           className={`ml-2 ${
                             formData.severity === "critical"
@@ -2249,8 +2249,8 @@ export function ManualAlertCreatorModal({
                       </div>
                       {isMyPrivateRule && (
                         <div className="md:col-span-2 xl:col-span-4">
-                          <span className="text-slate-500">Thông báo:</span>
-                          <p className="mt-1 text-sm text-slate-800">
+                          <span className="text-muted-foreground">Thông báo:</span>
+                          <p className="mt-1 text-sm text-foreground">
                             Sẽ gửi thông báo qua các kênh cấu hình ở bước 3 theo cấu hình của bạn trong My Profile.
                           </p>
                         </div>
@@ -2263,7 +2263,7 @@ export function ManualAlertCreatorModal({
           </div>
         </div>
 
-        <div className="shrink-0 flex items-center justify-between border-t border-slate-200 pt-3">
+        <div className="shrink-0 flex items-center justify-between border-t border-border pt-3">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -2275,12 +2275,12 @@ export function ManualAlertCreatorModal({
               </Button>
             )}
             {step < 4 ? (
-              <Button onClick={handleNext} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={handleNext}>
                 Next
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleCreate} className="bg-green-600 hover:bg-green-700" disabled={creating}>
+              <Button onClick={handleCreate} disabled={creating}>
                 <Check className="w-4 h-4 mr-1" />
                 {creating
                   ? isEdit ? "Saving..." : "Creating..."

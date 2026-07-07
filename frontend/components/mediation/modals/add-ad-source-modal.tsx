@@ -105,7 +105,7 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[min(90vh,720px)] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Ad Source</DialogTitle>
           <DialogDescription>Add a new source to your optimized waterfall</DialogDescription>
@@ -119,56 +119,60 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
               <label
                 className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                  type === "waterfall" ? "border-purple-500 bg-purple-50" : "border-slate-200 hover:border-slate-300",
+                  type === "waterfall"
+                    ? "border-primary/40 bg-primary/10"
+                    : "border-border hover:border-primary/30 hover:bg-muted/40",
                 )}
               >
                 <RadioGroupItem value="waterfall" className="mt-0.5" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-purple-600" />
-                    <span className="font-medium text-slate-900">Waterfall Source</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Layers className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-foreground">Waterfall Source</span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">Called in order by eCPM floor</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Called in order by eCPM floor</p>
                 </div>
               </label>
               <label
                 className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                  type === "bidding" ? "border-teal-500 bg-teal-50" : "border-slate-200 hover:border-slate-300",
+                  type === "bidding"
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : "border-border hover:border-primary/30 hover:bg-muted/40",
                 )}
               >
                 <RadioGroupItem value="bidding" className="mt-0.5" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-teal-600" />
-                    <span className="font-medium text-slate-900">Bidding Source</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Zap className="w-4 h-4 text-emerald-600 dark:text-emerald-300" />
+                    <span className="font-medium text-foreground">Bidding Source</span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">Competes in real-time auction</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Competes in real-time auction</p>
                 </div>
               </label>
             </RadioGroup>
           </div>
 
-          <div className="border-t border-slate-200" />
+          <div className="border-t border-border" />
 
           {/* Field 2: Ad Network */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Ad Network</Label>
             <Popover open={networkOpen} onOpenChange={setNetworkOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" className="w-full justify-between bg-white h-10">
+                <Button variant="outline" role="combobox" className="h-10 w-full justify-between bg-card">
                   {selectedNetwork ? (
-                    <span className="flex items-center gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
                       <span>{selectedNetworkData?.icon}</span>
-                      <span>{selectedNetwork}</span>
+                      <span className="truncate">{selectedNetwork}</span>
                     </span>
                   ) : (
-                    <span className="text-slate-500">Search or select ad network...</span>
+                    <span className="truncate text-muted-foreground">Search or select ad network...</span>
                   )}
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0" align="start">
+              <PopoverContent className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] min-w-0 p-0 sm:min-w-[360px]" align="start">
                 <Command>
                   <CommandInput placeholder="Search networks..." />
                   <CommandList>
@@ -185,8 +189,8 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
                           className="flex items-center gap-2"
                         >
                           <span>{network.icon}</span>
-                          <span>{network.name}</span>
-                          {selectedNetwork === network.name && <Check className="w-4 h-4 ml-auto text-green-500" />}
+                          <span className="truncate">{network.name}</span>
+                          {selectedNetwork === network.name && <Check className="w-4 h-4 ml-auto shrink-0 text-emerald-600 dark:text-emerald-300" />}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -202,8 +206,8 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
                           className="flex items-center gap-2"
                         >
                           <span>{network.icon}</span>
-                          <span>{network.name}</span>
-                          {selectedNetwork === network.name && <Check className="w-4 h-4 ml-auto text-green-500" />}
+                          <span className="truncate">{network.name}</span>
+                          {selectedNetwork === network.name && <Check className="w-4 h-4 ml-auto shrink-0 text-emerald-600 dark:text-emerald-300" />}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -220,7 +224,7 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
               <div className="space-y-2">
                 <Label className="text-sm font-medium">eCPM Floor</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
                     type="number"
                     step="0.01"
@@ -230,13 +234,13 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
                       setEcpmFloor(e.target.value)
                       if (e.target.value) validateFloor(e.target.value)
                     }}
-                    className={cn("pl-7", floorError && "border-red-500 focus-visible:ring-red-500")}
+                    className={cn("pl-7", floorError && "border-destructive focus-visible:ring-destructive/40")}
                   />
                 </div>
                 {floorError ? (
-                  <p className="text-xs text-red-500">{floorError}</p>
+                  <p className="text-xs text-destructive">{floorError}</p>
                 ) : (
-                  <p className="text-xs text-slate-500">Minimum eCPM required to show ads from this source</p>
+                  <p className="text-xs text-muted-foreground">Minimum eCPM required to show ads from this source</p>
                 )}
               </div>
 
@@ -248,7 +252,7 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
                   value={adUnitName}
                   onChange={(e) => setAdUnitName(e.target.value)}
                 />
-                <p className="text-xs text-slate-500">This will be the display name in your waterfall</p>
+                <p className="text-xs text-muted-foreground">This will be the display name in your waterfall</p>
               </div>
             </>
           )}
@@ -257,29 +261,34 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
           <div className="space-y-2">
             <Label className="text-sm font-medium">Status</Label>
             <div className="flex items-center gap-3">
-              <Switch checked={status} onCheckedChange={setStatus} className="data-[state=checked]:bg-green-500" />
-              <span className="text-sm text-slate-600">{status ? "Active" : "Inactive"}</span>
+              <Switch checked={status} onCheckedChange={setStatus} className="data-[state=checked]:bg-emerald-500" />
+              <span className="text-sm text-muted-foreground">{status ? "Active" : "Inactive"}</span>
             </div>
-            <p className="text-xs text-slate-500">You can change this later</p>
+            <p className="text-xs text-muted-foreground">You can change this later</p>
           </div>
 
           {/* Preview Card */}
           {selectedNetwork && (type === "bidding" || (type === "waterfall" && ecpmFloor)) && (
-            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Preview</p>
-              <div className="flex items-center gap-3">
+            <div className="space-y-2 rounded-lg bg-muted/40 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-lg">{selectedNetworkData?.icon}</span>
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900">
+                <div className="min-w-0 flex-1">
+                  <p className="break-words font-medium text-foreground">
                     {type === "waterfall" ? adUnitName || selectedNetwork : selectedNetwork}
                   </p>
                   {type === "waterfall" && ecpmFloor && (
-                    <p className="text-xs text-slate-500">${Number.parseFloat(ecpmFloor).toFixed(2)} floor</p>
+                    <p className="text-xs text-muted-foreground">${Number.parseFloat(ecpmFloor).toFixed(2)} floor</p>
                   )}
-                  {type === "bidding" && <p className="text-xs text-slate-500">Bidding source • No floor</p>}
+                  {type === "bidding" && <p className="text-xs text-muted-foreground">Bidding source • No floor</p>}
                 </div>
                 <Badge
-                  className={cn("border-0", status ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600")}
+                  className={cn(
+                    "shrink-0 border-0",
+                    status
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                      : "bg-secondary text-secondary-foreground",
+                  )}
                 >
                   {status ? "Active" : "Inactive"}
                 </Badge>
@@ -288,11 +297,11 @@ export function AddAdSourceModal({ open, onOpenChange, sourceType, onAddSource }
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSubmit} disabled={!isValid}>
+          <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={!isValid}>
             Add Source
           </Button>
         </DialogFooter>

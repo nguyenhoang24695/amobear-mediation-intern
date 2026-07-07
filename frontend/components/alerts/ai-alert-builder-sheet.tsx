@@ -278,45 +278,47 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[480px] sm:max-w-[480px] p-0 flex flex-col">
-        <SheetHeader className="p-4 border-b border-slate-200">
+      <SheetContent className="flex w-full max-w-full flex-col bg-background p-0 text-foreground sm:max-w-[480px]">
+        <SheetHeader className="border-b border-border p-4">
           <SheetTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
+            <Sparkles className="h-5 w-5 text-primary" />
             AI Alert Builder
           </SheetTitle>
         </SheetHeader>
 
-        <div ref={scrollRef} className="flex-1 p-4 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
             {messages.map((message) => (
-              <div key={message.id} className={`flex gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
+              <div key={message.id} className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : ""}`}>
                 {message.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-indigo-600" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <Bot className="h-4 w-4 text-primary" />
                   </div>
                 )}
 
-                <div className={`max-w-[85%] ${message.role === "user" ? "order-first" : ""}`}>
+                <div className={`max-w-[calc(100%-2.75rem)] sm:max-w-[85%] ${message.role === "user" ? "order-first" : ""}`}>
                   <div
                     className={`rounded-lg p-3 ${
-                      message.role === "user" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-900"
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border bg-muted/30 text-foreground"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-line">{message.content}</p>
+                    <p className="whitespace-pre-line text-sm">{message.content}</p>
                   </div>
 
                   {message.alertPreview && (
-                    <Card className="mt-3 border-amber-300 bg-amber-50">
+                    <Card className="mt-3 border-border bg-card">
                       <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <h4 className="font-semibold text-slate-900">{message.alertPreview.name}</h4>
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <h4 className="font-semibold text-foreground">{message.alertPreview.name}</h4>
                           <Badge
                             className={
                               message.alertPreview.severity === "critical"
-                                ? "bg-red-100 text-red-700"
+                                ? "bg-red-500/10 text-red-600 dark:text-red-400"
                                 : message.alertPreview.severity === "warning"
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-blue-100 text-blue-700"
+                                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                  : "bg-blue-500/10 text-blue-700 dark:text-blue-400"
                             }
                           >
                             {message.alertPreview.severity}
@@ -324,13 +326,13 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
                         </div>
 
                         <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-500">Metric:</span>
-                            <span className="font-medium">{message.alertPreview.metric}</span>
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                            <span className="text-muted-foreground">Metric:</span>
+                            <span className="font-medium text-foreground">{message.alertPreview.metric}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-slate-500">Apps:</span>
-                            <div className="flex gap-1">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2">
+                            <span className="text-muted-foreground">Apps:</span>
+                            <div className="flex flex-wrap gap-1">
                               {message.alertPreview.apps.map((app) => (
                                 <Badge key={app} variant="secondary" className="text-xs">
                                   {app}
@@ -339,22 +341,22 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
                             </div>
                           </div>
                           <div>
-                            <span className="text-slate-500">Condition:</span>
-                            <p className="text-slate-700 mt-1">{message.alertPreview.condition}</p>
+                            <span className="text-muted-foreground">Condition:</span>
+                            <p className="mt-1 text-foreground">{message.alertPreview.condition}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-4">
+                        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
                           <Button
                             size="sm"
-                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            className="w-full sm:flex-1"
                             onClick={() => handleCreateAlert(message.alertPreview!)}
                             disabled={creating}
                           >
                             <Check className="w-4 h-4 mr-1" />
                             {creating ? "Creating..." : "Create Alert"}
                           </Button>
-                          <Button size="sm" variant="outline" className="bg-white">
+                          <Button size="sm" variant="outline" className="w-full bg-background sm:w-auto">
                             <Edit2 className="w-4 h-4 mr-1" />
                             Edit
                           </Button>
@@ -369,7 +371,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
                         <button
                           key={idx}
                           onClick={() => handleSuggestionClick(suggestion)}
-                          className="block w-full text-left text-sm p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-indigo-300 transition-colors"
+                          className="block w-full rounded-lg border border-border bg-background p-2 text-left text-sm transition-colors hover:bg-accent/60 hover:border-primary/40"
                         >
                           {suggestion}
                         </button>
@@ -379,8 +381,8 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
                 </div>
 
                 {message.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-slate-600" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <User className="h-4 w-4 text-muted-foreground" />
                   </div>
                 )}
               </div>
@@ -388,14 +390,14 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
 
             {isLoading && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-indigo-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                  <Bot className="h-4 w-4 text-primary" />
                 </div>
-                <div className="bg-slate-100 rounded-lg p-3">
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
                   <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.1s]" />
-                    <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/70" />
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:0.1s]" />
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:0.2s]" />
                   </div>
                 </div>
               </div>
@@ -403,7 +405,7 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
           </div>
         </div>
 
-        <div className="p-4 border-t border-slate-200">
+        <div className="border-t border-border p-4">
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -418,11 +420,11 @@ export function AIAlertBuilderSheet({ open, onOpenChange, onCreated, ruleVisibil
               className="flex-1"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="shrink-0">
               <Send className="w-4 h-4" />
             </Button>
           </form>
-          <p className="text-xs text-slate-500 mt-2 text-center">Tip: Mo ta bang tieng Viet hoac tieng Anh deu duoc</p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">Tip: Mo ta bang tieng Viet hoac tieng Anh deu duoc</p>
         </div>
       </SheetContent>
       <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>

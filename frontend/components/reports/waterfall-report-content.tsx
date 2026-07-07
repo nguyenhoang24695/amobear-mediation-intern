@@ -143,7 +143,7 @@ export function WaterfallReportContent() {
 
   return (
     <div className="flex h-full flex-col bg-card">
-      <div className="border-b border-border px-6 py-4">
+      <div className="border-b border-border px-4 py-4 sm:px-6">
         <Link href="/reports" className="text-xs text-muted-foreground hover:text-primary">
           All reports
         </Link>
@@ -155,32 +155,37 @@ export function WaterfallReportContent() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 border-b border-border px-6 py-4">
-        <label className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 sm:px-6">
+        <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-muted-foreground">From</span>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="h-9 rounded-md border border-border px-2"
+            className="h-10 w-full rounded-md border border-border px-3 sm:w-[160px]"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-muted-foreground">To</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="h-9 rounded-md border border-border px-2"
+            className="h-10 w-full rounded-md border border-border px-3 sm:w-[160px]"
           />
         </label>
-        <Button type="button" className="h-9 bg-primary hover:bg-primary/90" disabled={loading} onClick={handleRun}>
+        <Button
+          type="button"
+          className="h-10 w-full bg-primary hover:bg-primary/90 sm:w-auto sm:min-w-[110px]"
+          disabled={loading}
+          onClick={handleRun}
+        >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
         </Button>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="w-80 shrink-0 overflow-y-auto border-r border-border p-4">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <div className="max-h-[42vh] w-full shrink-0 overflow-y-auto border-b border-border p-4 lg:max-h-none lg:w-80 lg:border-b-0 lg:border-r">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Apps</p>
           <div className="relative mb-3">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -210,7 +215,7 @@ export function WaterfallReportContent() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto p-6">
+        <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-6">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -235,11 +240,11 @@ export function WaterfallReportContent() {
               ) : null}
 
               {chartData.length > 0 ? (
-                <div className="mb-8 h-72 w-full">
+                <div className="mb-6 h-64 w-full sm:mb-8 sm:h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 48 }}>
+                    <BarChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 56 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={56} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" height={64} interval={0} />
                       <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatCurrency(Number(v))} />
                       <Tooltip formatter={(v: number) => formatCurrency(v)} />
                       <Legend />
@@ -250,7 +255,7 @@ export function WaterfallReportContent() {
               ) : null}
 
               <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="min-w-full text-sm">
+                <table className="min-w-[720px] text-sm lg:min-w-full">
                   <thead className="bg-muted/50 text-left text-xs font-medium uppercase text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3">Network</th>

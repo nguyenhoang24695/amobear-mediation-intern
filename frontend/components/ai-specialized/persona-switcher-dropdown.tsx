@@ -1,8 +1,13 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const PERSONAS = [
   { id: "product-owner", label: "Product Owner" },
@@ -12,7 +17,7 @@ const PERSONAS = [
   { id: "devops", label: "DevOps" },
   { id: "qa", label: "QA" },
   { id: "bod", label: "BOD" },
-]
+];
 
 export function PersonaSwitcherDropdown({ appId }: { appId?: string }) {
   return (
@@ -23,10 +28,12 @@ export function PersonaSwitcherDropdown({ appId }: { appId?: string }) {
       <DropdownMenuContent align="end">
         {PERSONAS.map((p) => (
           <DropdownMenuItem key={p.id} asChild>
-            <Link href={`/ai-hub/${p.id}${appId ? `/${appId}` : ""}`}>{p.label}</Link>
+            <Link href={`/ai-hub/${p.id}${appId ? `/${appId}` : ""}`}>
+              {p.label}
+            </Link>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

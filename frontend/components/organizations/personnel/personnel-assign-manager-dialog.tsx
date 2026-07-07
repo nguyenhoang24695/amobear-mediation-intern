@@ -66,17 +66,17 @@ export function PersonnelAssignManagerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-white text-slate-900 dark:border-white/10 dark:bg-slate-950 dark:text-slate-100">
         <DialogHeader>
           <DialogTitle>Assign manager</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-slate-500 dark:text-slate-400">
             Choose who {node?.name ?? "this member"} reports to in the org chart preview.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label>Manager</Label>
+            <Label className="text-slate-700 dark:text-slate-200">Manager</Label>
             <Select
               value={managerId || "__none__"}
               onValueChange={(v) => setManagerId(v === "__none__" ? "" : v)}
@@ -97,14 +97,14 @@ export function PersonnelAssignManagerDialog({
             </Select>
           </div>
           {savedMessage && (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-500/20 dark:bg-green-500/15 dark:text-green-200">
               {savedMessage}
             </p>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" className="dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-white" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving}>

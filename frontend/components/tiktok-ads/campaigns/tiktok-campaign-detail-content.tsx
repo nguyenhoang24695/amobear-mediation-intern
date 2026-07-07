@@ -20,10 +20,10 @@ import type { TikTokCampaignAdGroupSummaryDto, TikTokCampaignAdSummaryDto, TikTo
 
 function statusTone(value?: string | null) {
   const normalized = (value || "").toUpperCase()
-  if (["ENABLE", "ACTIVE", "COMPLETED"].includes(normalized)) return "bg-emerald-50 text-emerald-700"
-  if (["DISABLE", "PAUSED"].includes(normalized)) return "bg-amber-50 text-amber-700"
-  if (["FAILED", "DELETED", "ARCHIVED", "DISAPPROVED", "WITH_ISSUES"].includes(normalized)) return "bg-rose-50 text-rose-700"
-  return "bg-slate-100 text-slate-700"
+  if (["ENABLE", "ACTIVE", "COMPLETED"].includes(normalized)) return "border-emerald-200/70 bg-emerald-50/80 text-emerald-800 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-200"
+  if (["DISABLE", "PAUSED"].includes(normalized)) return "border-amber-200/70 bg-amber-50/80 text-amber-800 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200"
+  if (["FAILED", "DELETED", "ARCHIVED", "DISAPPROVED", "WITH_ISSUES"].includes(normalized)) return "border-rose-200/70 bg-rose-50/80 text-rose-800 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-200"
+  return "border-slate-200/80 bg-slate-50/80 text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200"
 }
 
 function formatDateTime(value?: string | null) {
@@ -74,29 +74,29 @@ function buildTikTokCampaignUrl(advertiserId?: string | null, campaignId?: strin
 
 function InfoItem({ label, value }: { label: string; value?: string | number | null }) {
   return (
-    <div className="min-w-0">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500 truncate">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-900 break-words">{value ?? "-"}</p>
+    <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+      <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1 break-words text-sm font-medium leading-5 text-slate-900 dark:text-slate-100">{value ?? "-"}</p>
     </div>
   )
 }
 
 function MetricCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
-      {helper ? <p className="mt-1 text-xs text-slate-500">{helper}</p> : null}
+    <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{value}</p>
+      {helper ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{helper}</p> : null}
     </div>
   )
 }
 
 function AppCell({ appDisplayName, appId, platform, appIconUri }: { appDisplayName?: string | null; appId?: string | null; platform?: string | null; appIconUri?: string | null }) {
-  if (!appDisplayName && !appId) return <Badge className="bg-amber-50 text-amber-700">Unmapped</Badge>
+  if (!appDisplayName && !appId) return <Badge className="border border-amber-200/70 bg-amber-50/80 text-amber-800 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">Unmapped</Badge>
   const title = (
     <div className="min-w-0">
-      <div className="truncate text-sm font-medium text-slate-900">{appDisplayName ?? appId}</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{appDisplayName ?? appId}</div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
         {platform ? <span>{toTitleCase(platform)}</span> : null}
         {appId ? <span className="font-mono">{appId}</span> : null}
       </div>
@@ -106,7 +106,7 @@ function AppCell({ appDisplayName, appId, platform, appIconUri }: { appDisplayNa
     <div className="flex min-w-0 items-center gap-3">
       <Avatar className="h-9 w-9 shrink-0 rounded-lg">
         <AvatarImage src={appIconUri || "/placeholder.svg"} alt={appDisplayName ?? appId ?? "App"} className="rounded-lg object-cover" />
-        <AvatarFallback className="rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-600">{getInitials(appDisplayName ?? appId)}</AvatarFallback>
+        <AvatarFallback className="rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{getInitials(appDisplayName ?? appId)}</AvatarFallback>
       </Avatar>
       {appId ? <Link href={`/apps/${encodeURIComponent(appId)}`} className="min-w-0 hover:underline">{title}</Link> : title}
     </div>
@@ -115,12 +115,12 @@ function AppCell({ appDisplayName, appId, platform, appIconUri }: { appDisplayNa
 
 function AdGroupTextList({ texts }: { texts?: string[] | null }) {
   const rows = (texts ?? []).map((item) => item.trim()).filter(Boolean)
-  if (rows.length === 0) return <span className="text-sm text-slate-400">No ad texts synced</span>
+  if (rows.length === 0) return <span className="text-sm text-slate-400 dark:text-slate-500">No ad texts synced</span>
   return (
     <div className="space-y-1">
       {rows.map((text, index) => (
-        <div key={`${index}-${text}`} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
-          <span className="mr-1 font-semibold text-slate-500">#{index + 1}</span>{text}
+        <div key={`${index}-${text}`} className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2 py-1.5 text-xs text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-300">
+          <span className="mr-1 font-semibold text-slate-500 dark:text-slate-400">#{index + 1}</span>{text}
         </div>
       ))}
     </div>
@@ -128,9 +128,10 @@ function AdGroupTextList({ texts }: { texts?: string[] | null }) {
 }
 function AdGroupsTable({ rows }: { rows: TikTokCampaignAdGroupSummaryDto[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-slate-50 hover:bg-slate-50">
+    <div className="overflow-x-auto">
+      <Table className="min-w-[1120px]">
+        <TableHeader>
+          <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 dark:bg-slate-900/60 dark:hover:bg-slate-900/60">
           <TableHead>Name</TableHead>
           <TableHead>Ad Group ID</TableHead>
           <TableHead>Status</TableHead>
@@ -141,34 +142,35 @@ function AdGroupsTable({ rows }: { rows: TikTokCampaignAdGroupSummaryDto[] }) {
           <TableHead>App</TableHead>
           <TableHead>Last Synced</TableHead>
         </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 ? (
-          <TableRow><TableCell colSpan={9} className="py-10 text-center text-sm text-slate-500">No ad groups synced for this campaign.</TableCell></TableRow>
-        ) : rows.map((item) => (
-          <TableRow key={item.id}>
-            <TableCell className="font-medium text-slate-900">{item.name || item.tikTokAdGroupId}</TableCell>
-            <TableCell className="font-mono text-xs text-slate-500">{item.tikTokAdGroupId}</TableCell>
-            <TableCell><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
-            <TableCell className="min-w-[280px]"><AdGroupTextList texts={item.adTexts} /></TableCell>
-            <TableCell>
-              <div className="text-sm text-slate-700">{formatMoney(item.budget)}</div>
-              <div className="text-xs text-slate-500">{item.budgetMode ?? "-"}</div>
-            </TableCell>
-            <TableCell>
-              <div className="text-sm text-slate-700">{item.optimizationGoal ?? "-"}</div>
-              <div className="text-xs text-slate-500">{[item.bidType, item.bid ? formatMoney(item.bid) : null, item.billingEvent].filter(Boolean).join(" / ")}</div>
-            </TableCell>
-            <TableCell>
-              <div className="text-sm text-slate-700">{item.scheduleType ?? "-"}</div>
-              <div className="text-xs text-slate-500">{[formatDateTime(item.scheduleStartTime), formatDateTime(item.scheduleEndTime)].filter((value) => value !== "-").join(" -> ") || "-"}</div>
-            </TableCell>
-            <TableCell><AppCell appDisplayName={item.appDisplayName} appId={item.appId} platform={item.platform} /></TableCell>
-            <TableCell className="text-sm text-slate-600">{formatDateTime(item.lastSyncedAt)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow><TableCell colSpan={9} className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">No ad groups synced for this campaign.</TableCell></TableRow>
+          ) : rows.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell className="font-medium text-slate-900 dark:text-slate-100">{item.name || item.tikTokAdGroupId}</TableCell>
+              <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400">{item.tikTokAdGroupId}</TableCell>
+              <TableCell><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
+              <TableCell className="min-w-[280px]"><AdGroupTextList texts={item.adTexts} /></TableCell>
+              <TableCell>
+                <div className="text-sm text-slate-700 dark:text-slate-300">{formatMoney(item.budget)}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{item.budgetMode ?? "-"}</div>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm text-slate-700 dark:text-slate-300">{item.optimizationGoal ?? "-"}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{[item.bidType, item.bid ? formatMoney(item.bid) : null, item.billingEvent].filter(Boolean).join(" / ")}</div>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm text-slate-700 dark:text-slate-300">{item.scheduleType ?? "-"}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{[formatDateTime(item.scheduleStartTime), formatDateTime(item.scheduleEndTime)].filter((value) => value !== "-").join(" -> ") || "-"}</div>
+              </TableCell>
+              <TableCell><AppCell appDisplayName={item.appDisplayName} appId={item.appId} platform={item.platform} /></TableCell>
+              <TableCell className="text-sm text-slate-600 dark:text-slate-400">{formatDateTime(item.lastSyncedAt)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
@@ -185,11 +187,11 @@ function CreativePreview({ item, onPreviewVideo }: { item: TikTokCampaignAdSumma
   const video = item.creativeMedia?.videos?.[0]
   const hasIds = (item.videoIds?.length ?? 0) > 0 || Boolean(item.videoId) || item.imageIds.length > 0
 
-  if (!image && !video && !hasIds) return <span className="text-sm text-slate-400">No media</span>
+  if (!image && !video && !hasIds) return <span className="text-sm text-slate-400 dark:text-slate-500">No media</span>
 
   return (
     <div className="flex min-w-[220px] items-center gap-3">
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/80 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
         {video?.videoCoverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={video.videoCoverUrl} alt={video.fileName || item.name} className="h-full w-full object-cover" />
@@ -205,16 +207,16 @@ function CreativePreview({ item, onPreviewVideo }: { item: TikTokCampaignAdSumma
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           {item.adFormat ? <Badge variant="outline" className="text-[10px]">{item.adFormat}</Badge> : null}
-          {video?.displayable === false || image?.displayable === false ? <Badge className="bg-amber-50 text-amber-700">Not displayable</Badge> : null}
+          {video?.displayable === false || image?.displayable === false ? <Badge className="border border-amber-200/70 bg-amber-50/80 text-amber-800 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">Not displayable</Badge> : null}
         </div>
-        <div className="truncate text-sm font-medium text-slate-900">{video?.fileName || image?.fileName || item.videoIds?.[0] || item.videoId || item.imageIds[0] || "-"}</div>
-        <div className="truncate font-mono text-xs text-slate-500">{video?.videoId || image?.imageId || item.videoIds?.[0] || item.videoId || item.imageIds[0]}</div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{video?.fileName || image?.fileName || item.videoIds?.[0] || item.videoId || item.imageIds[0] || "-"}</div>
+        <div className="truncate font-mono text-xs text-slate-500 dark:text-slate-400">{video?.videoId || image?.imageId || item.videoIds?.[0] || item.videoId || item.imageIds[0]}</div>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           {video ? <span>{formatDuration(video.duration)}</span> : null}
           <span>{formatDimensions(video?.width ?? image?.width, video?.height ?? image?.height)}</span>
           {item.callToAction ? <span>{item.callToAction}</span> : null}
         </div>
-        {item.creativeMedia?.errorMessage ? <div className="text-xs text-amber-700">{item.creativeMedia.errorMessage}</div> : null}
+        {item.creativeMedia?.errorMessage ? <div className="text-xs font-medium text-amber-800 dark:text-amber-200">{item.creativeMedia.errorMessage}</div> : null}
         <div className="flex flex-wrap gap-2">
           {video?.previewUrl ? (
             <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => onPreviewVideo(item)}>
@@ -250,37 +252,38 @@ function AdsTable({ rows, adGroups }: { rows: TikTokCampaignAdSummaryDto[]; adGr
   return (
     <>
       {rows.length === 0 ? (
-        <div className="py-10 text-center text-sm text-slate-500">No ads synced for this campaign.</div>
+        <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">No ads synced for this campaign.</div>
       ) : (
-        <div className="space-y-4 p-4">
+        <div className="space-y-4 p-3 sm:p-4">
           {adGroupsWithAds.map((group) => {
             const groupAds = adsByAdGroup[group.id] ?? []
             return (
-              <Card key={group.id} className="border-slate-200 shadow-sm">
+              <Card key={group.id} className="rounded-2xl border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
                 <CardHeader className="space-y-3 pb-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <CardTitle className="truncate text-base">{group.name || group.tikTokAdGroupId}</CardTitle>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <CardTitle className="break-words text-base text-slate-900 dark:text-slate-100">{group.name || group.tikTokAdGroupId}</CardTitle>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                         <Badge className={statusTone(group.status)}>{group.status || "UNKNOWN"}</Badge>
                         <span className="font-mono">{group.tikTokAdGroupId}</span>
                         <span>{groupAds.length} video/image assets</span>
                       </div>
                     </div>
-                    <div className="text-right text-xs text-slate-500">
+                    <div className="text-right text-xs text-slate-500 dark:text-slate-400">
                       <div>{group.optimizationGoal ?? "-"}</div>
                       <div>{[group.bidType, group.billingEvent].filter(Boolean).join(" / ") || "-"}</div>
                     </div>
                   </div>
                   <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ad texts shared by this ad set</p>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Ad texts shared by this ad set</p>
                     <AdGroupTextList texts={group.adTexts} />
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <Table>
+                  <div className="overflow-x-auto">
+                  <Table className="min-w-[980px]">
                     <TableHeader>
-                      <TableRow className="bg-slate-50 hover:bg-slate-50">
+                      <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 dark:bg-slate-900/60 dark:hover:bg-slate-900/60">
                         <TableHead>Video / Image Asset</TableHead>
                         <TableHead>Ad ID</TableHead>
                         <TableHead>Status</TableHead>
@@ -293,18 +296,19 @@ function AdsTable({ rows, adGroups }: { rows: TikTokCampaignAdSummaryDto[]; adGr
                         <TableRow key={item.id}>
                           <TableCell>
                             <div className="space-y-1">
-                              <div className="font-medium text-slate-900">{item.name || item.tikTokAdId}</div>
+                              <div className="font-medium text-slate-900 dark:text-slate-100">{item.name || item.tikTokAdId}</div>
                               <CreativePreview item={item} onPreviewVideo={setPreviewAd} />
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-slate-500">{item.tikTokAdId}</TableCell>
+                          <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400">{item.tikTokAdId}</TableCell>
                           <TableCell><Badge className={statusTone(item.status)}>{item.status || "UNKNOWN"}</Badge></TableCell>
                           <TableCell><AppCell appDisplayName={item.appDisplayName} appId={item.appId} platform={item.platform} /></TableCell>
-                          <TableCell className="text-sm text-slate-600">{formatDateTime(item.lastSyncedAt)}</TableCell>
+                          <TableCell className="text-sm text-slate-600 dark:text-slate-400">{formatDateTime(item.lastSyncedAt)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 </CardContent>
               </Card>
             )
@@ -448,57 +452,57 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
 
   const tiktokUrl = detail ? buildTikTokCampaignUrl(detail.advertiserId, detail.tikTokCampaignId) : null
 
-  if (!isValidCampaignId) return <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">Invalid TikTok campaign id.</div>
-  if (loading) return <div className="p-6 text-sm text-slate-500">Loading TikTok campaign...</div>
-  if (error || !detail) return <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error?.message || "TikTok campaign not found."}</div>
+  if (!isValidCampaignId) return <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-200">Invalid TikTok campaign id.</div>
+  if (loading) return <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-6 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-950/30 dark:text-slate-400">Loading TikTok campaign...</div>
+  if (error || !detail) return <div className="rounded-2xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-200">{error?.message || "TikTok campaign not found."}</div>
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-5 pb-24 sm:pb-0">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <Button asChild variant="ghost" className="mb-2 px-0 text-slate-600">
+          <Button asChild variant="ghost" className="mb-2 w-fit px-0 text-slate-600 dark:text-slate-300">
             <Link href="/tiktok-ads/campaigns"><ArrowLeft className="mr-2 h-4 w-4" />Back to campaigns</Link>
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-cyan-50 p-2">
-              <Megaphone className="h-5 w-5 text-cyan-700" />
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl border border-cyan-200/70 bg-cyan-50/80 p-2 shadow-sm dark:border-cyan-900/40 dark:bg-cyan-950/20">
+              <Megaphone className="h-5 w-5 text-cyan-700 dark:text-cyan-300" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{detail.name || detail.tikTokCampaignId}</h1>
-              <p className="font-mono text-xs text-slate-500">{detail.tikTokCampaignId}</p>
+              <h1 className="max-w-[18rem] break-words text-xl font-bold leading-tight text-slate-900 dark:text-slate-100 sm:max-w-none sm:text-2xl">{detail.name || detail.tikTokCampaignId}</h1>
+              <p className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{detail.tikTokCampaignId}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge className={statusTone(detail.status)}>{detail.status || "UNKNOWN"}</Badge>
-                {detail.secondaryStatus ? <Badge className="bg-slate-100 text-slate-700">{detail.secondaryStatus}</Badge> : null}
-                {detail.isUnmapped ? <Badge className="bg-amber-50 text-amber-700">Unmapped</Badge> : null}
-                {detail.isSyncStale ? <Badge className="bg-amber-50 text-amber-700">Stale sync</Badge> : null}
+                {detail.secondaryStatus ? <Badge className="border border-slate-200/80 bg-slate-50/80 text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">{detail.secondaryStatus}</Badge> : null}
+                {detail.isUnmapped ? <Badge className="border border-amber-200/70 bg-amber-50/80 text-amber-800 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">Unmapped</Badge> : null}
+                {detail.isSyncStale ? <Badge className="border border-amber-200/70 bg-amber-50/80 text-amber-800 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">Stale sync</Badge> : null}
               </div>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
           {tiktokUrl ? (
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
               <a href={tiktokUrl} target="_blank" rel="noreferrer noopener"><ExternalLink className="mr-2 h-4 w-4" />Open in TikTok</a>
             </Button>
           ) : null}
           {canDuplicate ? (
             <>
-              <Button variant="outline" onClick={() => void checkDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing}>
+              <Button variant="outline" onClick={() => void checkDuplicateReadiness()} disabled={checkingReadiness || duplicating || syncing} className="w-full sm:w-auto">
                 {checkingReadiness ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Check Duplicate Readiness
               </Button>
-              <Button variant="outline" onClick={() => void duplicateToRequest()} disabled={duplicatingToRequest || duplicating || syncing}>
+              <Button variant="outline" onClick={() => void duplicateToRequest()} disabled={duplicatingToRequest || duplicating || syncing} className="w-full sm:w-auto">
                 {duplicatingToRequest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FilePlus2 className="mr-2 h-4 w-4" />}
                 Duplicate To Request
               </Button>
-              <Button variant="outline" onClick={() => setDuplicateConfirmOpen(true)} disabled={duplicating || syncing || readiness?.isReady !== true}>
+              <Button variant="outline" onClick={() => setDuplicateConfirmOpen(true)} disabled={duplicating || syncing || readiness?.isReady !== true} className="w-full sm:w-auto">
                 {duplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
                 Duplicate Campaign
               </Button>
             </>
           ) : null}
           {canSync ? (
-            <Button className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={sync} disabled={syncing || duplicating}>
+            <Button className="w-full bg-cyan-600 text-white hover:bg-cyan-700 sm:w-auto" onClick={sync} disabled={syncing || duplicating}>
               {syncing ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Sync Account
             </Button>
@@ -507,22 +511,22 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
       </div>
 
       {readiness ? (
-        <Card className={readiness.isReady ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
-              {readiness.isReady ? <CheckCircle2 className="h-4 w-4 text-emerald-700" /> : <XCircle className="h-4 w-4 text-rose-700" />}
+        <Card className={readiness.isReady ? "border-emerald-200/70 bg-emerald-50/70 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-950/20" : "border-rose-200/70 bg-rose-50/70 shadow-sm dark:border-rose-900/40 dark:bg-rose-950/20"}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+              {readiness.isReady ? <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-emerald-300" /> : <XCircle className="h-4 w-4 text-rose-700 dark:text-rose-300" />}
               Duplicate Readiness
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-slate-700">{readiness.summary}</p>
-            <div className="grid gap-2 md:grid-cols-2">
+            <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">{readiness.summary}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
               {readiness.checks.map((check) => (
-                <div key={check.key} className="flex items-start gap-2 rounded-md border border-white/70 bg-white/70 p-2 text-sm">
-                  {check.isReady ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-700" />}
+                <div key={check.key} className="flex items-start gap-2 rounded-2xl border border-white/70 bg-white/80 p-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+                  {check.isReady ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-700 dark:text-rose-300" />}
                   <div>
-                    <div className="font-medium text-slate-900">{check.label}</div>
-                    <div className="text-xs text-slate-600">{check.message}</div>
+                    <div className="font-medium text-slate-900 dark:text-slate-100">{check.label}</div>
+                    <div className="text-xs leading-5 text-slate-600 dark:text-slate-400">{check.message}</div>
                   </div>
                 </div>
               ))}
@@ -531,12 +535,12 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
         </Card>
       ) : null}
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="border-slate-200 xl:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-900">Campaign Info</CardTitle>
+        <Card className="rounded-2xl border-slate-200/80 bg-white/90 shadow-sm xl:col-span-2 dark:border-slate-800 dark:bg-slate-950/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">Campaign Info</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <InfoItem label="Name" value={detail.name} />
               <InfoItem label="TikTok Campaign ID" value={detail.tikTokCampaignId} />
               <InfoItem label="Objective" value={detail.objective} />
@@ -550,12 +554,12 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-900">Sync Metadata</CardTitle>
+        <Card className="rounded-2xl border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">Sync Metadata</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               <InfoItem label="Ad Groups" value={detail.adGroupCount} />
               <InfoItem label="Ads" value={detail.adCount} />
               <InfoItem label="Request ID" value={detail.createdFromRequestId ? `#${detail.createdFromRequestId}` : "-"} />
@@ -566,12 +570,12 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-900">Campaign Configuration</CardTitle>
+        <Card className="rounded-2xl border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">Campaign Configuration</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               <InfoItem label="Budget" value={formatMoney(detail.budget)} />
               <InfoItem label="Budget Mode" value={detail.budgetMode} />
               <InfoItem label="App Promotion Type" value={detail.appPromotionType} />
@@ -580,14 +584,14 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 xl:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-900">App & Account Context</CardTitle>
+        <Card className="rounded-2xl border-slate-200/80 bg-white/90 shadow-sm xl:col-span-2 dark:border-slate-800 dark:bg-slate-950/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">App & Account Context</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">App</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">App</p>
                 <AppCell appDisplayName={detail.appDisplayName} appId={detail.appId} platform={detail.platform} appIconUri={detail.appIconUri} />
               </div>
               <div className="grid gap-4">
@@ -599,14 +603,14 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
         </Card>
       </div>
 
-      <Card className="border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-slate-900">
+      <Card className="rounded-2xl border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Performance ({formatDateTime(detail.performanceStartDate)} - {formatDateTime(detail.performanceEndDate)})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard label="Spend" value={formatMoney(detail.performance?.spend)} />
             <MetricCard label="Impressions" value={formatNumber(detail.performance?.impressions)} />
             <MetricCard label="Clicks" value={formatNumber(detail.performance?.clicks)} />
@@ -623,38 +627,42 @@ export function TikTokCampaignDetailContent({ campaignId }: { campaignId: string
       </Card>
 
       <Tabs defaultValue="adgroups" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="adgroups">Ad Groups ({detail.adGroups.length})</TabsTrigger>
-          <TabsTrigger value="ads">Ads ({detail.ads.length})</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+          <TabsTrigger value="adgroups" className="rounded-xl py-2 text-xs font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:text-slate-400 dark:data-[state=active]:bg-slate-900 dark:data-[state=active]:text-slate-100">
+            Ad Groups ({detail.adGroups.length})
+          </TabsTrigger>
+          <TabsTrigger value="ads" className="rounded-xl py-2 text-xs font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm dark:text-slate-400 dark:data-[state=active]:bg-slate-900 dark:data-[state=active]:text-slate-100">
+            Ads ({detail.ads.length})
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="adgroups" className="rounded-md border bg-white">
+        <TabsContent value="adgroups" className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
           <AdGroupsTable rows={detail.adGroups} />
         </TabsContent>
-        <TabsContent value="ads" className="rounded-md border bg-white">
+        <TabsContent value="ads" className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
           <AdsTable rows={detail.ads} adGroups={detail.adGroups} />
         </TabsContent>
       </Tabs>
 
       <AlertDialog open={duplicateConfirmOpen} onOpenChange={setDuplicateConfirmOpen}>
-        <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg overflow-hidden">
+        <AlertDialogContent className="w-[calc(100vw-1rem)] max-w-lg overflow-hidden rounded-2xl border-slate-200/80 bg-white/95 shadow-xl dark:border-slate-800 dark:bg-slate-950/95">
           <AlertDialogHeader>
             <AlertDialogTitle>Duplicate TikTok Campaign?</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2 text-sm text-slate-600">
+              <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
                 <p>This will create a disabled copy of this campaign in TikTok, including synced ad groups and ads.</p>
-                <div className="min-w-0 max-w-full overflow-hidden rounded-md bg-slate-50 px-3 py-2">
-                  <span className="block text-xs font-medium uppercase tracking-wide text-slate-500">Campaign name</span>
-                  <span className="block max-h-20 max-w-full overflow-auto break-all font-semibold text-slate-700">{detail.name}</span>
+                <div className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Campaign name</span>
+                  <span className="block max-h-20 max-w-full overflow-auto break-all font-semibold text-slate-800 dark:text-slate-100">{detail.name}</span>
                 </div>
                 <p>Only campaigns that passed readiness check can be duplicated.</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {readiness ? <p className="min-w-0 break-words text-sm text-slate-600">{readiness.summary}</p> : null}
-          {duplicateError ? <div className="min-w-0 break-words rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{duplicateError}</div> : null}
+          {readiness ? <p className="min-w-0 break-words text-sm text-slate-600 dark:text-slate-300">{readiness.summary}</p> : null}
+          {duplicateError ? <div className="min-w-0 break-words rounded-xl border border-rose-200/80 bg-rose-50/80 px-3 py-2 text-sm text-rose-700 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-200">{duplicateError}</div> : null}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={duplicating}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={duplicating || readiness?.isReady !== true} onClick={(event) => { event.preventDefault(); void duplicate() }}>
+            <AlertDialogCancel disabled={duplicating} className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={duplicating || readiness?.isReady !== true} onClick={(event) => { event.preventDefault(); void duplicate() }} className="rounded-full">
               {duplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
               Duplicate Campaign
             </AlertDialogAction>

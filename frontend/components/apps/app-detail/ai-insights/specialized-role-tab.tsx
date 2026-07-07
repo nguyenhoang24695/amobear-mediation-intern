@@ -9,11 +9,20 @@ import { NoInsightState } from "./no-insight-state"
 import { ViewToggleActionsBar } from "./view-toggle-actions-bar"
 import { InsightContentRendered } from "./insight-content-rendered"
 import { InsightContentRaw } from "./insight-content-raw"
-import { generatePersonaDigest, getPersonaReportDetail, listPersonaReports } from "@/lib/api/specialized-insights"
+import {
+  generatePersonaDigest,
+  getPersonaReportDetail,
+  listPersonaReports,
+} from "@/lib/api/specialized-insights"
 import { PersonaContextEditor } from "./persona-context-editor"
 import { PersonaChatPanel } from "./persona-chat-panel"
 import { HistoricalInsightsCalendar } from "./historical-insights-calendar"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUp } from "lucide-react"
@@ -119,7 +128,6 @@ export function SpecializedRoleInsightTab({ personaId, personaLabel, appRowId, i
       const res = await generatePersonaDigest(personaId, appRowId, dateStr)
       toast({ title: `Đã generate ${personaLabel}`, description: `Ngày ${dateStr}` })
       await load()
-      // Sau load(): vẫn ưu tiên payload vừa generate (tránh list/detail lệch DB duplicate / replica lag).
       if (res.digestMarkdown?.trim()) {
         setMarkdown(res.digestMarkdown)
         setReportId(res.reportId)
@@ -135,15 +143,6 @@ export function SpecializedRoleInsightTab({ personaId, personaLabel, appRowId, i
   const missing = !markdown || markdown.trim().length === 0
 
   const generatedAt = useMemo(() => null, [])
-
-  const quickQuestions = useMemo(() => {
-    const recs = extractRecommendationBullets(markdown)
-    if (recs.length === 0) return []
-    return recs.map(
-      (r) =>
-        `Deep-dive: ${r}\n\nHãy dùng MCP/SQL để chứng minh bằng số liệu (funnel/core loop/retention) và đưa ra next steps.`,
-    )
-  }, [markdown])
 
   const quickQuestionRows = useMemo(() => {
     const recs = extractRecommendationBullets(markdown)
@@ -178,69 +177,11 @@ export function SpecializedRoleInsightTab({ personaId, personaLabel, appRowId, i
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500 py-12 text-center">Đang tải {personaLabel}…</p>
+    return <p className="py-12 text-center text-sm text-muted-foreground">Đang tải {personaLabel}…</p>
   }
 
-  if (missing) {
-    return (
-      <div className="flex flex-col gap-6">
-        <InsightHeader
-          selectedDate={selectedDate}
-          onPrevDay={() => handleDateChange(subDays(selectedDate, 1))}
-          onNextDay={() => {
-            const n = addDays(selectedDate, 1)
-            if (!isAfter(startOfDay(n), today)) handleDateChange(n)
-          }}
-          onDateSelect={handleDateChange}
-          isToday={format(selectedDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")}
-          generatedAt={generatedAt}
-          generationTime={null}
-          model={null}
-          onRegenerate={handleRegenerate}
-        />
-        <HistoricalInsightsCalendar data={historyEntries} selectedDate={selectedDate} onDateClick={handleDateChange} />
-        <NoInsightState
-          reason={`Chưa có ${personaLabel} insight cho ngày này. Bấm generate để tạo (T-1 mặc định).`}
-          onGenerate={handleRegenerate}
-        />
-
-        <Accordion type="single" collapsible defaultValue="chat" className="w-full">
-          <AccordionItem value="context" className="border rounded-md border-slate-200 bg-white">
-            <AccordionTrigger className="px-4 py-3 text-sm hover:no-underline">
-              <span className="flex items-center gap-2">
-                <span className="font-medium text-slate-900">Context</span>
-                <Badge variant="secondary" className="text-xs">
-                  collapse/expand
-                </Badge>
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <PersonaContextEditor appRowId={appRowId} personaId={personaId} personaLabel={personaLabel} />
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="chat" className="border rounded-md border-slate-200 bg-white mt-3">
-            <AccordionTrigger className="px-4 py-3 text-sm hover:no-underline">
-              <span className="flex items-center gap-2">
-                <span className="font-medium text-slate-900">Deep-dive chat</span>
-              </span>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <PersonaChatPanel
-                appRowId={appRowId}
-                personaId={personaId}
-                personaLabel={personaLabel}
-                referenceReportId={reportId}
-                suggestedDraft={suggestedDraft}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-6">
+  const commonContent = (
+    <>
       <InsightHeader
         selectedDate={selectedDate}
         onPrevDay={() => handleDateChange(subDays(selectedDate, 1))}
@@ -258,55 +199,11 @@ export function SpecializedRoleInsightTab({ personaId, personaLabel, appRowId, i
 
       <HistoricalInsightsCalendar data={historyEntries} selectedDate={selectedDate} onDateClick={handleDateChange} />
 
-      <ViewToggleActionsBar viewMode={viewMode} onViewModeChange={setViewMode} content={markdown} />
-      {viewMode === "rendered" ? <InsightContentRendered content={markdown} /> : <InsightContentRaw content={markdown} />}
-
-      {quickQuestionRows.length > 0 && (
-        <div className="rounded-md border border-slate-200 bg-white px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-slate-900">Gợi ý câu hỏi để deep-dive</p>
-            <p className="text-xs text-slate-500">Click để đưa vào ô chat</p>
-          </div>
-          <TooltipProvider>
-            <div className="mt-3 space-y-2">
-              {quickQuestionRows.map((q, idx) => (
-                <Tooltip key={idx}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left hover:bg-slate-50 transition-colors"
-                      onClick={() => setSuggestedDraft(q.prompt)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900">
-                            Recommend #{idx + 1}
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-600 truncate max-w-[min(920px,84vw)]">
-                            {q.title}
-                          </p>
-                        </div>
-                        <span className="text-xs text-slate-400 flex-shrink-0">Click</span>
-                      </div>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[min(720px,92vw)] p-3">
-                    <div className="text-xs text-slate-100 whitespace-pre-wrap">
-                      {q.title}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          </TooltipProvider>
-        </div>
-      )}
-
       <Accordion type="single" collapsible defaultValue="chat" className="w-full">
-        <AccordionItem value="context" className="border rounded-md border-slate-200 bg-white">
+        <AccordionItem value="context" className="rounded-md border border-border bg-card">
           <AccordionTrigger className="px-4 py-3 text-sm hover:no-underline">
             <span className="flex items-center gap-2">
-              <span className="font-medium text-slate-900">Context</span>
+              <span className="font-medium text-foreground">Context</span>
               <Badge variant="secondary" className="text-xs">
                 collapse/expand
               </Badge>
@@ -316,10 +213,10 @@ export function SpecializedRoleInsightTab({ personaId, personaLabel, appRowId, i
             <PersonaContextEditor appRowId={appRowId} personaId={personaId} personaLabel={personaLabel} />
           </AccordionContent>
         </AccordionItem>
-        <AccordionItem value="chat" className="border rounded-md border-slate-200 bg-white mt-3">
+        <AccordionItem value="chat" className="mt-3 rounded-md border border-border bg-card">
           <AccordionTrigger className="px-4 py-3 text-sm hover:no-underline">
             <span className="flex items-center gap-2">
-              <span className="font-medium text-slate-900">Deep-dive chat</span>
+              <span className="font-medium text-foreground">Deep-dive chat</span>
             </span>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
@@ -333,19 +230,76 @@ export function SpecializedRoleInsightTab({ personaId, personaLabel, appRowId, i
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+    </>
+  )
+
+  if (missing) {
+    return (
+      <div className="flex flex-col gap-6">
+        {commonContent}
+        <NoInsightState
+          reason={`Chưa có ${personaLabel} insight cho ngày này. Bấm generate để tạo (T-1 mặc định).`}
+          onGenerate={handleRegenerate}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {commonContent}
+
+      <ViewToggleActionsBar viewMode={viewMode} onViewModeChange={setViewMode} content={markdown ?? ""} />
+      {viewMode === "rendered" ? <InsightContentRendered content={markdown ?? ""} /> : <InsightContentRaw content={markdown ?? ""} />}
+
+      {quickQuestionRows.length > 0 && (
+        <div className="rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium text-foreground">Gợi ý câu hỏi để deep-dive</p>
+            <p className="text-xs text-muted-foreground">Click để đưa vào ô chat</p>
+          </div>
+          <TooltipProvider>
+            <div className="mt-3 space-y-2">
+              {quickQuestionRows.map((q, idx) => (
+                <Tooltip key={idx}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-left transition-colors hover:bg-muted"
+                      onClick={() => setSuggestedDraft(q.prompt)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">Recommend #{idx + 1}</p>
+                          <p className="mt-0.5 max-w-[min(920px,84vw)] truncate text-xs text-muted-foreground">
+                            {q.title}
+                          </p>
+                        </div>
+                        <span className="flex-shrink-0 text-xs text-muted-foreground">Click</span>
+                      </div>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[min(720px,92vw)] border-border bg-popover p-3 text-popover-foreground shadow-md">
+                    <div className="whitespace-pre-wrap text-xs">{q.title}</div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+        </div>
+      )}
 
       {showGoTop && (
         <Button
           type="button"
           size="icon"
-          className="fixed bottom-6 right-6 z-50 h-10 w-10 rounded-full shadow-lg bg-slate-900 hover:bg-slate-800"
+          className="fixed bottom-6 right-6 z-50 h-10 w-10 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           title="Go to Top"
         >
-          <ArrowUp className="h-4 w-4 text-white" />
+          <ArrowUp className="h-4 w-4" />
         </Button>
       )}
     </div>
   )
 }
-

@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   Download,
@@ -18,41 +18,48 @@ import {
   ShieldCheck,
   ShieldX,
   XCircle,
-} from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useToast } from "@/hooks/use-toast"
-import { invalidateCache, useApi } from "@/hooks/use-api"
-import { hasScreenFunction } from "@/lib/auth"
-import { tiktokAccountsApi, tiktokAuthApi } from "@/lib/api/tiktok-ads"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { invalidateCache, useApi } from "@/hooks/use-api";
+import { hasScreenFunction } from "@/lib/auth";
+import { tiktokAccountsApi, tiktokAuthApi } from "@/lib/api/tiktok-ads";
 import type {
   CreateTikTokIntegrationRequestDto,
   TikTokIntegrationDto,
   TikTokIntegrationTestResultDto,
   UpdateTikTokIntegrationRequestDto,
-} from "@/types/tiktok-ads"
+} from "@/types/tiktok-ads";
 
-const SCREEN_TIKTOK_ACCOUNTS = "s-tiktok-accounts"
-const REQUIRED_SCOPES = ["3", "4", "7"] as const
-const SCOPE_HINT = REQUIRED_SCOPES.join(", ")
+const SCREEN_TIKTOK_ACCOUNTS = "s-tiktok-accounts";
+const REQUIRED_SCOPES = ["3", "4", "7"] as const;
+const SCOPE_HINT = REQUIRED_SCOPES.join(", ");
 const SCOPE_DESCRIPTIONS = [
   {
     id: "3",
@@ -74,7 +81,7 @@ const SCOPE_DESCRIPTIONS = [
     name: "Business Center",
     description: "Optional for BC assets, balances, and transactions.",
   },
-] as const
+] as const;
 
 const emptyForm: CreateTikTokIntegrationRequestDto = {
   displayName: "",
@@ -85,75 +92,102 @@ const emptyForm: CreateTikTokIntegrationRequestDto = {
   isSandbox: false,
   isDefault: false,
   isEnabled: true,
-}
+};
 
 interface TikTokIntegrationsContentProps {
-  embedded?: boolean
+  embedded?: boolean;
 }
 
 function formatDateTime(value?: string | null) {
-  if (!value) return "-"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return "-"
-  return date.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString(undefined, {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 function scopesToString(scopes?: string[] | null) {
-  return (scopes ?? []).join(", ")
+  return (scopes ?? []).join(", ");
 }
 
 function listToString(values?: string[] | null) {
-  if (!values || values.length === 0) return "-"
-  return values.join(", ")
+  if (!values || values.length === 0) return "-";
+  return values.join(", ");
 }
 
 function formatTokenStatus(value?: string | null) {
-  return (value?.toUpperCase() ?? "NOT_TESTED").replaceAll("_", " ")
+  return (value?.toUpperCase() ?? "NOT_TESTED").replaceAll("_", " ");
 }
 
 function getTokenStatusMessageClass(value?: string | null) {
   switch (value?.toUpperCase() ?? "NOT_TESTED") {
     case "VALID":
-      return "text-green-700"
+      return "text-green-700";
     case "NOT_TESTED":
-      return "text-amber-700"
+      return "text-amber-700";
     case "REVOKED":
     case "MISSING_SCOPES":
     case "INVALID":
-      return "text-red-700"
+      return "text-red-700";
     default:
-      return "text-slate-700"
+      return "text-muted-foreground";
   }
 }
 
 function getConnectionTestToast(result: TikTokIntegrationTestResultDto): {
-  title: string
-  description: string
-  variant: "default" | "destructive"
+  title: string;
+  description: string;
+  variant: "default" | "destructive";
 } {
   return {
     title: result.success ? "Connection valid" : "Connection failed",
     description: result.message || formatTokenStatus(result.tokenStatus),
     variant: result.success ? "default" : "destructive",
-  }
+  };
 }
 
 function deriveTokenBadge(integration: TikTokIntegrationDto) {
   if (!integration.isEnabled) {
-    return { label: "Disabled", className: "bg-slate-100 text-slate-600", icon: <Power className="w-3 h-3" /> }
+    return {
+      label: "Disabled",
+      className: "bg-muted text-muted-foreground",
+      icon: <Power className="w-3 h-3" />,
+    };
   }
 
   switch (integration.tokenStatus) {
     case "VALID":
-      return { label: "Valid", className: "bg-green-100 text-green-700", icon: <ShieldCheck className="w-3 h-3" /> }
+      return {
+        label: "Valid",
+        className: "bg-green-100 text-green-700",
+        icon: <ShieldCheck className="w-3 h-3" />,
+      };
     case "REVOKED":
-      return { label: "Revoked", className: "bg-red-100 text-red-700", icon: <ShieldX className="w-3 h-3" /> }
+      return {
+        label: "Revoked",
+        className: "bg-red-100 text-red-700",
+        icon: <ShieldX className="w-3 h-3" />,
+      };
     case "MISSING_SCOPES":
-      return { label: "Missing Scopes", className: "bg-red-100 text-red-700", icon: <ShieldX className="w-3 h-3" /> }
+      return {
+        label: "Missing Scopes",
+        className: "bg-red-100 text-red-700",
+        icon: <ShieldX className="w-3 h-3" />,
+      };
     case "INVALID":
-      return { label: "Invalid", className: "bg-red-100 text-red-700", icon: <XCircle className="w-3 h-3" /> }
+      return {
+        label: "Invalid",
+        className: "bg-red-100 text-red-700",
+        icon: <XCircle className="w-3 h-3" />,
+      };
     default:
-      return { label: "Not Tested", className: "bg-amber-100 text-amber-700", icon: <ShieldAlert className="w-3 h-3" /> }
+      return {
+        label: "Not Tested",
+        className: "bg-amber-100 text-amber-700",
+        icon: <ShieldAlert className="w-3 h-3" />,
+      };
   }
 }
 
@@ -164,17 +198,17 @@ function MaskedInput({
   placeholder,
   hint,
 }: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  hint?: string | null
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  hint?: string | null;
 }) {
-  const [show, setShow] = useState(false)
+  const [show, setShow] = useState(false);
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-slate-700">{label}</Label>
+      <Label className="text-xs font-medium text-foreground/80">{label}</Label>
       <div className="relative">
         <Input
           type={show ? "text" : "password"}
@@ -183,121 +217,173 @@ function MaskedInput({
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
         />
-        <button type="button" onClick={() => setShow((current) => !current)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+        <button
+          type="button"
+          onClick={() => setShow((current) => !current)}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        >
           {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
       </div>
-      {hint ? <p className="text-[11px] text-slate-400">Current hint: {hint}</p> : null}
+      {hint ? (
+        <p className="text-[11px] text-muted-foreground">
+          Current hint: {hint}
+        </p>
+      ) : null}
     </div>
-  )
+  );
 }
 
-export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegrationsContentProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const { toast } = useToast()
-  const canCreate = hasScreenFunction(SCREEN_TIKTOK_ACCOUNTS, "create")
-  const canEdit = hasScreenFunction(SCREEN_TIKTOK_ACCOUNTS, "edit")
-  const canDisableEnable = hasScreenFunction(SCREEN_TIKTOK_ACCOUNTS, "disable-enable")
+export function TikTokIntegrationsContent({
+  embedded = false,
+}: TikTokIntegrationsContentProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const canCreate = hasScreenFunction(SCREEN_TIKTOK_ACCOUNTS, "create");
+  const canEdit = hasScreenFunction(SCREEN_TIKTOK_ACCOUNTS, "edit");
+  const canDisableEnable = hasScreenFunction(
+    SCREEN_TIKTOK_ACCOUNTS,
+    "disable-enable",
+  );
 
-  const { data: integrations, loading, error, refetch } = useApi(
-    () => tiktokAccountsApi.getIntegrations(),
-    { cacheKey: "tiktok-integrations:list" }
-  )
+  const {
+    data: integrations,
+    loading,
+    error,
+    refetch,
+  } = useApi(() => tiktokAccountsApi.getIntegrations(), {
+    cacheKey: "tiktok-integrations:list",
+  });
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<TikTokIntegrationDto | null>(null)
-  const [form, setForm] = useState<CreateTikTokIntegrationRequestDto>(emptyForm)
-  const [scopeInput, setScopeInput] = useState(scopesToString(emptyForm.scopes))
-  const [submitting, setSubmitting] = useState(false)
-  const [testingConnection, setTestingConnection] = useState(false)
-  const [testResult, setTestResult] = useState<TikTokIntegrationTestResultDto | null>(null)
-  const [connectionStateDirty, setConnectionStateDirty] = useState(true)
-  const [oauthLoadingId, setOauthLoadingId] = useState<number | null>(null)
-  const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(null)
-  const oauthNoticeRef = useRef<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<TikTokIntegrationDto | null>(
+    null,
+  );
+  const [form, setForm] =
+    useState<CreateTikTokIntegrationRequestDto>(emptyForm);
+  const [scopeInput, setScopeInput] = useState(
+    scopesToString(emptyForm.scopes),
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] =
+    useState<TikTokIntegrationTestResultDto | null>(null);
+  const [connectionStateDirty, setConnectionStateDirty] = useState(true);
+  const [oauthLoadingId, setOauthLoadingId] = useState<number | null>(null);
+  const [rowActionLoadingId, setRowActionLoadingId] = useState<number | null>(
+    null,
+  );
+  const oauthNoticeRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const oauthStatus = searchParams.get("oauth")
-    if (!oauthStatus) return
+    const oauthStatus = searchParams.get("oauth");
+    if (!oauthStatus) return;
 
-    const marker = searchParams.toString()
-    if (oauthNoticeRef.current === marker) return
-    oauthNoticeRef.current = marker
+    const marker = searchParams.toString();
+    if (oauthNoticeRef.current === marker) return;
+    oauthNoticeRef.current = marker;
 
-    const message = searchParams.get("message")
+    const message = searchParams.get("message");
     if (oauthStatus === "success") {
-      toast({ title: "TikTok OAuth completed", description: message ?? "TikTok token exchange completed successfully." })
+      toast({
+        title: "TikTok OAuth completed",
+        description: message ?? "TikTok token exchange completed successfully.",
+      });
     } else {
       toast({
         title: "TikTok OAuth failed",
         description: message ?? "TikTok token flow did not complete.",
         variant: "destructive",
-      })
+      });
     }
 
-    const nextParams = new URLSearchParams(searchParams.toString())
-    nextParams.delete("oauth")
-    nextParams.delete("message")
-    const nextQuery = nextParams.toString()
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname)
-  }, [pathname, router, searchParams, toast])
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("oauth");
+    nextParams.delete("message");
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname);
+  }, [pathname, router, searchParams, toast]);
 
   const openCreate = () => {
-    setEditTarget(null)
-    setForm(emptyForm)
-    setScopeInput(scopesToString(emptyForm.scopes))
-    setTestResult(null)
-    setConnectionStateDirty(true)
-    setDrawerOpen(true)
-  }
+    setEditTarget(null);
+    setForm(emptyForm);
+    setScopeInput(scopesToString(emptyForm.scopes));
+    setTestResult(null);
+    setConnectionStateDirty(true);
+    setDrawerOpen(true);
+  };
 
   const openEdit = (integration: TikTokIntegrationDto) => {
-    setEditTarget(integration)
+    setEditTarget(integration);
     setForm({
       displayName: integration.displayName,
       tikTokAppId: integration.tikTokAppId,
       appSecret: "",
       accessToken: "",
-      scopes: integration.scopes.length > 0 ? integration.scopes : [...REQUIRED_SCOPES],
+      scopes:
+        integration.scopes.length > 0
+          ? integration.scopes
+          : [...REQUIRED_SCOPES],
       isSandbox: false,
       isDefault: integration.isDefault,
       isEnabled: integration.isEnabled,
-    })
-    setScopeInput(scopesToString(integration.scopes.length > 0 ? integration.scopes : [...REQUIRED_SCOPES]))
-    setTestResult(null)
-    setConnectionStateDirty(false)
-    setDrawerOpen(true)
-  }
+    });
+    setScopeInput(
+      scopesToString(
+        integration.scopes.length > 0
+          ? integration.scopes
+          : [...REQUIRED_SCOPES],
+      ),
+    );
+    setTestResult(null);
+    setConnectionStateDirty(false);
+    setDrawerOpen(true);
+  };
 
   const redirectToOAuth = async (integration: TikTokIntegrationDto) => {
     try {
-      setOauthLoadingId(integration.id)
-      const redirectUri = `${window.location.origin}/tiktok-ads/integrations/callback`
-      const response = await tiktokAuthApi.getAuthorizeUrl(integration.id, redirectUri, String(integration.id))
-      window.location.href = response.authorizationUrl
+      setOauthLoadingId(integration.id);
+      const redirectUri = `${window.location.origin}/tiktok-ads/integrations/callback`;
+      const response = await tiktokAuthApi.getAuthorizeUrl(
+        integration.id,
+        redirectUri,
+        String(integration.id),
+      );
+      window.location.href = response.authorizationUrl;
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Unable to start TikTok OAuth."
-      toast({ title: "OAuth failed", description: message, variant: "destructive" })
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to start TikTok OAuth.";
+      toast({
+        title: "OAuth failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setOauthLoadingId(null)
+      setOauthLoadingId(null);
     }
-  }
+  };
 
-  const updateConnectionForm = (patch: Partial<CreateTikTokIntegrationRequestDto>) => {
-    setForm((current) => ({ ...current, ...patch }))
-    setTestResult(null)
-    setConnectionStateDirty(true)
-  }
+  const updateConnectionForm = (
+    patch: Partial<CreateTikTokIntegrationRequestDto>,
+  ) => {
+    setForm((current) => ({ ...current, ...patch }));
+    setTestResult(null);
+    setConnectionStateDirty(true);
+  };
 
   const validateForm = () => {
-    const errors: string[] = []
-    if (!form.displayName.trim()) errors.push("Display Name is required.")
-    if (!form.tikTokAppId.trim()) errors.push("TikTok Developer App ID is required.")
-    if (!form.appSecret?.trim() && !editTarget?.hasAppSecret) errors.push("App Secret is required.")
-    return errors
-  }
+    const errors: string[] = [];
+    if (!form.displayName.trim()) errors.push("Display Name is required.");
+    if (!form.tikTokAppId.trim())
+      errors.push("TikTok Developer App ID is required.");
+    if (!form.appSecret?.trim() && !editTarget?.hasAppSecret)
+      errors.push("App Secret is required.");
+    return errors;
+  };
 
   const buildTestRequest = () => ({
     integrationId: editTarget?.id ?? null,
@@ -306,37 +392,48 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
     accessToken: form.accessToken || null,
     scopes: form.scopes ?? [],
     isSandbox: false,
-  })
+  });
 
   const handleTestConnection = async () => {
     try {
-      setTestingConnection(true)
-      const result = await tiktokAuthApi.testDraft(buildTestRequest())
-      setTestResult(result)
-      setConnectionStateDirty(false)
+      setTestingConnection(true);
+      const result = await tiktokAuthApi.testDraft(buildTestRequest());
+      setTestResult(result);
+      setConnectionStateDirty(false);
       if (result.scopes.length > 0) {
-        setScopeInput(scopesToString(result.scopes))
+        setScopeInput(scopesToString(result.scopes));
       }
       setForm((current) => ({
         ...current,
         scopes: result.scopes.length > 0 ? result.scopes : current.scopes,
-      }))
-      toast(getConnectionTestToast(result))
+      }));
+      toast(getConnectionTestToast(result));
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Unable to test the TikTok integration."
-      toast({ title: "Test failed", description: message, variant: "destructive" })
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to test the TikTok integration.";
+      toast({
+        title: "Test failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setTestingConnection(false)
+      setTestingConnection(false);
     }
-  }
+  };
 
   const handleSubmit = async () => {
     try {
-      setSubmitting(true)
-      const validationErrors = validateForm()
+      setSubmitting(true);
+      const validationErrors = validateForm();
       if (validationErrors.length > 0) {
-        toast({ title: "Validation failed", description: validationErrors[0], variant: "destructive" })
-        return
+        toast({
+          title: "Validation failed",
+          description: validationErrors[0],
+          variant: "destructive",
+        });
+        return;
       }
 
       const requestPayload = {
@@ -345,110 +442,168 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
         accessToken: form.accessToken || null,
         scopes: form.scopes ?? [],
         isSandbox: false,
-      }
+      };
 
       if (editTarget) {
-        await tiktokAccountsApi.updateIntegration(editTarget.id, requestPayload as UpdateTikTokIntegrationRequestDto)
+        await tiktokAccountsApi.updateIntegration(
+          editTarget.id,
+          requestPayload as UpdateTikTokIntegrationRequestDto,
+        );
       } else {
-        await tiktokAccountsApi.createIntegration(requestPayload)
+        await tiktokAccountsApi.createIntegration(requestPayload);
       }
 
-      invalidateCache("tiktok-integrations:list")
-      await refetch()
-      setDrawerOpen(false)
-      toast({ title: editTarget ? "Integration updated" : "Integration created" })
+      invalidateCache("tiktok-integrations:list");
+      await refetch();
+      setDrawerOpen(false);
+      toast({
+        title: editTarget ? "Integration updated" : "Integration created",
+      });
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Unable to save integration."
-      toast({ title: "Save failed", description: message, variant: "destructive" })
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to save integration.";
+      toast({
+        title: "Save failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const toggleEnabled = async (integration: TikTokIntegrationDto) => {
     try {
-      setRowActionLoadingId(integration.id)
+      setRowActionLoadingId(integration.id);
       if (integration.isEnabled) {
-        await tiktokAccountsApi.disableIntegration(integration.id)
+        await tiktokAccountsApi.disableIntegration(integration.id);
       } else {
-        await tiktokAccountsApi.enableIntegration(integration.id)
+        await tiktokAccountsApi.enableIntegration(integration.id);
       }
 
-      invalidateCache("tiktok-integrations:list")
-      await refetch()
-      toast({ title: integration.isEnabled ? "Integration disabled" : "Integration enabled" })
+      invalidateCache("tiktok-integrations:list");
+      await refetch();
+      toast({
+        title: integration.isEnabled
+          ? "Integration disabled"
+          : "Integration enabled",
+      });
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Unable to update integration."
-      toast({ title: "Update failed", description: message, variant: "destructive" })
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to update integration.";
+      toast({
+        title: "Update failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setRowActionLoadingId(null)
+      setRowActionLoadingId(null);
     }
-  }
+  };
 
-  const handleTestSavedConnection = async (integration: TikTokIntegrationDto) => {
+  const handleTestSavedConnection = async (
+    integration: TikTokIntegrationDto,
+  ) => {
     try {
-      setRowActionLoadingId(integration.id)
-      const result = await tiktokAuthApi.testSaved(integration.id)
-      invalidateCache("tiktok-integrations:list")
-      await refetch()
-      toast(getConnectionTestToast(result))
+      setRowActionLoadingId(integration.id);
+      const result = await tiktokAuthApi.testSaved(integration.id);
+      invalidateCache("tiktok-integrations:list");
+      await refetch();
+      toast(getConnectionTestToast(result));
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Unable to test the integration."
-      toast({ title: "Test failed", description: message, variant: "destructive" })
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to test the integration.";
+      toast({
+        title: "Test failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setRowActionLoadingId(null)
+      setRowActionLoadingId(null);
     }
-  }
+  };
 
   const handleSyncAdAccounts = async (integration: TikTokIntegrationDto) => {
     try {
-      setRowActionLoadingId(integration.id)
-      await tiktokAccountsApi.syncAdAccounts(integration.id)
-      invalidateCache("tiktok-integrations:list")
-      invalidateCache("tiktok-ad-accounts:list")
-      await refetch()
-      toast({ title: "Ad accounts synced" })
+      setRowActionLoadingId(integration.id);
+      await tiktokAccountsApi.syncAdAccounts(integration.id);
+      invalidateCache("tiktok-integrations:list");
+      invalidateCache("tiktok-ad-accounts:list");
+      await refetch();
+      toast({ title: "Ad accounts synced" });
     } catch (apiError) {
-      const message = apiError instanceof Error ? apiError.message : "Unable to sync ad accounts."
-      toast({ title: "Sync failed", description: message, variant: "destructive" })
+      const message =
+        apiError instanceof Error
+          ? apiError.message
+          : "Unable to sync ad accounts.";
+      toast({
+        title: "Sync failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
-      setRowActionLoadingId(null)
+      setRowActionLoadingId(null);
     }
-  }
+  };
 
-  const displayedTokenStatus = testResult?.tokenStatus ?? (connectionStateDirty ? "NOT_TESTED" : editTarget?.tokenStatus ?? "NOT_TESTED")
-  const displayedLastCheckedAt = testResult?.checkedAt ?? (connectionStateDirty ? null : editTarget?.lastCheckedAt ?? null)
+  const displayedTokenStatus =
+    testResult?.tokenStatus ??
+    (connectionStateDirty
+      ? "NOT_TESTED"
+      : (editTarget?.tokenStatus ?? "NOT_TESTED"));
+  const displayedLastCheckedAt =
+    testResult?.checkedAt ??
+    (connectionStateDirty ? null : (editTarget?.lastCheckedAt ?? null));
   const displayedMessage =
     testResult?.message ??
-    (connectionStateDirty ? (editTarget ? "Connection test needs to be rerun after recent credential or permission changes." : null) : editTarget?.lastCheckMessage ?? null)
-  const displayedScopes = testResult?.scopes.length ? testResult.scopes : form.scopes ?? []
-  const displayedAdvertisers = testResult?.authorizedAdvertiserIds.length ? testResult.authorizedAdvertiserIds : editTarget?.authorizedAdvertiserIds ?? []
-  const displayedAdvertiserCount = displayedAdvertisers.length
+    (connectionStateDirty
+      ? editTarget
+        ? "Connection test needs to be rerun after recent credential or permission changes."
+        : null
+      : (editTarget?.lastCheckMessage ?? null));
+  const displayedScopes = testResult?.scopes.length
+    ? testResult.scopes
+    : (form.scopes ?? []);
+  const displayedAdvertisers = testResult?.authorizedAdvertiserIds.length
+    ? testResult.authorizedAdvertiserIds
+    : (editTarget?.authorizedAdvertiserIds ?? []);
+  const displayedAdvertiserCount = displayedAdvertisers.length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 rounded-2xl border border-border bg-gradient-to-b from-background via-background to-muted/30 p-5 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {!embedded ? (
-            <nav className="mb-1.5 flex items-center gap-1 text-xs text-slate-500">
+            <nav className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
               <span>TikTok Ads</span>
               <span>/</span>
-              <span className="font-medium text-slate-900">Integrations</span>
+              <span className="font-medium text-foreground">Integrations</span>
             </nav>
           ) : null}
           <div className="flex items-center gap-3">
-            <div className="shrink-0 rounded-lg bg-pink-50 p-2">
-              <Link2 className="h-5 w-5 text-pink-600" />
+            <div className="shrink-0 rounded-xl bg-gradient-to-br from-fuchsia-500 to-rose-600 p-2.5 shadow-sm">
+              <Link2 className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl font-bold text-slate-900">TikTok Integrations</h1>
-              <p className="text-sm text-slate-500">Manage TikTok Marketing API credentials, OAuth tokens, and advertiser sync.</p>
+              <h1 className="text-xl font-semibold text-foreground">
+                TikTok Integrations
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Manage TikTok Marketing API credentials, OAuth tokens, and
+                advertiser sync.
+              </p>
             </div>
           </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {canCreate ? (
-            <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" size="sm" onClick={openCreate}>
+            <Button className="w-full sm:w-auto" size="sm" onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Create Integration
             </Button>
@@ -456,20 +611,40 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50">
-              <TableHead className="text-xs font-medium text-slate-500">Name</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">TikTok Developer App ID</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Secret</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Token</TableHead>
-              <TableHead className="w-36 text-xs font-medium text-slate-500">Token Status</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Advertisers</TableHead>
-              <TableHead className="text-xs font-medium text-slate-500">Scopes</TableHead>
-              <TableHead className="w-20 text-xs font-medium text-slate-500">Default</TableHead>
-              <TableHead className="w-20 text-xs font-medium text-slate-500">Enabled</TableHead>
-              <TableHead className="w-32 text-xs font-medium text-slate-500">Last Checked</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                Name
+              </TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                TikTok Developer App ID
+              </TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                Secret
+              </TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                Token
+              </TableHead>
+              <TableHead className="w-36 text-xs font-medium text-muted-foreground">
+                Token Status
+              </TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                Advertisers
+              </TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                Scopes
+              </TableHead>
+              <TableHead className="w-20 text-xs font-medium text-muted-foreground">
+                Default
+              </TableHead>
+              <TableHead className="w-20 text-xs font-medium text-muted-foreground">
+                Enabled
+              </TableHead>
+              <TableHead className="w-32 text-xs font-medium text-muted-foreground">
+                Last Checked
+              </TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -477,7 +652,7 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
             {loading ? (
               <TableRow>
                 <TableCell colSpan={11} className="py-12">
-                  <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading integrations...
                   </div>
@@ -485,82 +660,146 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={11} className="py-12 text-center text-sm text-red-600">
+                <TableCell
+                  colSpan={11}
+                  className="py-12 text-center text-sm text-destructive"
+                >
                   {error.message}
                 </TableCell>
               </TableRow>
             ) : (integrations ?? []).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={11} className="py-12 text-center text-sm text-slate-400">
+                <TableCell
+                  colSpan={11}
+                  className="py-12 text-center text-sm text-muted-foreground"
+                >
                   No integrations configured yet.
                 </TableCell>
               </TableRow>
             ) : (
               (integrations ?? []).map((integration) => {
-                const badge = deriveTokenBadge(integration)
-                const isBusy = rowActionLoadingId === integration.id
+                const badge = deriveTokenBadge(integration);
+                const isBusy = rowActionLoadingId === integration.id;
 
                 return (
-                  <TableRow key={integration.id} className="text-sm">
-                    <TableCell className="font-medium text-slate-900">{integration.displayName}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{integration.tikTokAppId}</TableCell>
-                    <TableCell className="text-xs text-slate-500">{integration.hasAppSecret ? integration.appSecretHint ?? "Saved" : "-"}</TableCell>
-                    <TableCell className="text-xs text-slate-500">{integration.hasAccessToken ? integration.accessTokenHint ?? "Saved" : "-"}</TableCell>
+                  <TableRow
+                    key={integration.id}
+                    className="text-sm hover:bg-muted/40"
+                  >
+                    <TableCell className="font-medium text-foreground">
+                      {integration.displayName}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {integration.tikTokAppId}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {integration.hasAppSecret
+                        ? (integration.appSecretHint ?? "Saved")
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {integration.hasAccessToken
+                        ? (integration.accessTokenHint ?? "Saved")
+                        : "-"}
+                    </TableCell>
                     <TableCell>
-                      <Badge className={`flex w-fit items-center gap-1 text-[11px] ${badge.className}`}>
+                      <Badge
+                        className={`flex w-fit items-center gap-1 text-[11px] ${badge.className}`}
+                      >
                         {badge.icon}
                         {badge.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{integration.authorizedAdvertiserIds.length.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-slate-500">
-                      {integration.scopes.length > 0 ? scopesToString(integration.scopes.slice(0, 3)) : "-"}
-                      {integration.scopes.length > 3 ? ` +${integration.scopes.length - 3}` : ""}
+                    <TableCell className="text-xs text-muted-foreground">
+                      {integration.authorizedAdvertiserIds.length.toLocaleString()}
                     </TableCell>
-                    <TableCell>{integration.isDefault ? <Badge className="bg-blue-100 text-[11px] text-blue-700">Default</Badge> : null}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {integration.scopes.length > 0
+                        ? scopesToString(integration.scopes.slice(0, 3))
+                        : "-"}
+                      {integration.scopes.length > 3
+                        ? ` +${integration.scopes.length - 3}`
+                        : ""}
+                    </TableCell>
+                    <TableCell>
+                      {integration.isDefault ? (
+                        <Badge className="bg-indigo-500/10 text-[11px] text-indigo-700 hover:bg-indigo-500/10">
+                          Default
+                        </Badge>
+                      ) : null}
+                    </TableCell>
                     <TableCell>
                       <Switch
                         checked={integration.isEnabled}
-                        onCheckedChange={() => canDisableEnable && void toggleEnabled(integration)}
+                        onCheckedChange={() =>
+                          canDisableEnable && void toggleEnabled(integration)
+                        }
                         disabled={!canDisableEnable || isBusy}
                       />
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatDateTime(integration.lastCheckedAt)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDateTime(integration.lastCheckedAt)}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={isBusy}>
-                            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={isBusy}
+                          >
+                            {isBusy ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           {canEdit ? (
-                            <DropdownMenuItem onClick={() => openEdit(integration)}>
+                            <DropdownMenuItem
+                              onClick={() => openEdit(integration)}
+                            >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                           ) : null}
                           {canDisableEnable ? (
-                            <DropdownMenuItem onClick={() => void toggleEnabled(integration)}>
+                            <DropdownMenuItem
+                              onClick={() => void toggleEnabled(integration)}
+                            >
                               <Power className="mr-2 h-4 w-4" />
                               {integration.isEnabled ? "Disable" : "Enable"}
                             </DropdownMenuItem>
                           ) : null}
-                          {canEdit || canDisableEnable ? <DropdownMenuSeparator /> : null}
+                          {canEdit || canDisableEnable ? (
+                            <DropdownMenuSeparator />
+                          ) : null}
                           {canEdit ? (
-                            <DropdownMenuItem onClick={() => void handleTestSavedConnection(integration)}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                void handleTestSavedConnection(integration)
+                              }
+                            >
                               <ShieldCheck className="mr-2 h-4 w-4" />
                               Test Connection
                             </DropdownMenuItem>
                           ) : null}
                           {canEdit ? (
-                            <DropdownMenuItem onClick={() => void handleSyncAdAccounts(integration)}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                void handleSyncAdAccounts(integration)
+                              }
+                            >
                               <Download className="mr-2 h-4 w-4" />
                               Sync Ad Accounts
                             </DropdownMenuItem>
                           ) : null}
                           {canEdit ? (
-                            <DropdownMenuItem onClick={() => void redirectToOAuth(integration)}>
+                            <DropdownMenuItem
+                              onClick={() => void redirectToOAuth(integration)}
+                            >
                               <ExternalLink className="mr-2 h-4 w-4" />
                               Open OAuth
                             </DropdownMenuItem>
@@ -569,7 +808,7 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                )
+                );
               })
             )}
           </TableBody>
@@ -577,152 +816,261 @@ export function TikTokIntegrationsContent({ embedded = false }: TikTokIntegratio
       </div>
 
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:w-[min(1120px,calc(100vw-3rem))] sm:!max-w-[1120px]">
-          <DialogHeader className="flex-shrink-0 border-b border-slate-100 px-6 pb-4 pt-6">
-            <DialogTitle className="text-base font-semibold text-slate-900">
+        <DialogContent className="flex max-h-[90vh] w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:w-[min(1120px,calc(100vw-3rem))] sm:!max-w-[1120px]">
+          <DialogHeader className="flex-shrink-0 border-b border-border bg-muted/30 px-6 pb-4 pt-6">
+            <DialogTitle className="text-base font-semibold text-foreground">
               {editTarget ? "Edit Integration" : "Create Integration"}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
-            <div className="rounded-lg border border-pink-200 bg-pink-50 px-3 py-2.5 text-sm text-pink-800">
-              This integration is used by backend services to call TikTok Marketing API for OAuth, advertiser sync, reports, and campaign requests.
+            <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50 px-3 py-2.5 text-sm text-fuchsia-900">
+              This integration is used by backend services to call TikTok
+              Marketing API for OAuth, advertiser sync, reports, and campaign
+              requests.
             </div>
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_400px] xl:grid-cols-[minmax(0,1.25fr)_430px]">
-              <div className="space-y-4 rounded-lg border border-slate-200 bg-white px-4 py-4">
+              <div className="space-y-4 rounded-xl border border-border bg-card px-4 py-4 shadow-sm">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Integration Setup</h3>
-                  <p className="mt-1 text-[11px] text-slate-500">Configure the TikTok app credentials used for OAuth token exchange.</p>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Integration Setup
+                  </h3>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Configure the TikTok app credentials used for OAuth token
+                    exchange.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">
+                  <Label className="text-xs font-medium text-foreground/80">
                     Display Name <span className="text-red-500">*</span>
                   </Label>
-                  <Input className="h-9 text-sm" value={form.displayName} onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))} />
+                  <Input
+                    className="h-9 text-sm"
+                    value={form.displayName}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        displayName: event.target.value,
+                      }))
+                    }
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">
-                    TikTok Developer App ID <span className="text-red-500">*</span>
+                  <Label className="text-xs font-medium text-foreground/80">
+                    TikTok Developer App ID{" "}
+                    <span className="text-red-500">*</span>
                   </Label>
-                  <Input className="h-9 font-mono text-sm" value={form.tikTokAppId} onChange={(event) => updateConnectionForm({ tikTokAppId: event.target.value })} />
-                  <p className="text-[11px] text-slate-400">Developer App ID from TikTok Business Developer settings.</p>
+                  <Input
+                    className="h-9 font-mono text-sm"
+                    value={form.tikTokAppId}
+                    onChange={(event) =>
+                      updateConnectionForm({ tikTokAppId: event.target.value })
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Developer App ID from TikTok Business Developer settings.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <MaskedInput
                     label="App Secret"
                     value={form.appSecret ?? ""}
-                    onChange={(value) => updateConnectionForm({ appSecret: value })}
+                    onChange={(value) =>
+                      updateConnectionForm({ appSecret: value })
+                    }
                     placeholder="Leave blank to keep current value"
                     hint={editTarget?.appSecretHint ?? null}
                   />
-                  <p className="text-[11px] text-slate-400">Secret from TikTok Business Developer settings.</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Secret from TikTok Business Developer settings.
+                  </p>
                 </div>
               </div>
 
-              <div className="h-fit space-y-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+              <div className="h-fit space-y-4 rounded-xl border border-border bg-muted/30 px-4 py-4 shadow-sm">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Access &amp; Permissions</h3>
-                  <p className="mt-1 text-[11px] text-slate-500">Use OAuth for new tokens or paste an existing token for local validation.</p>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Access &amp; Permissions
+                  </h3>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Use OAuth for new tokens or paste an existing token for
+                    local validation.
+                  </p>
                 </div>
                 <MaskedInput
                   label="Access Token"
                   value={form.accessToken ?? ""}
-                  onChange={(value) => updateConnectionForm({ accessToken: value })}
+                  onChange={(value) =>
+                    updateConnectionForm({ accessToken: value })
+                  }
                   placeholder="Leave blank to keep current value"
                   hint={editTarget?.accessTokenHint ?? null}
                 />
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-slate-700">Scopes (comma-separated)</Label>
+                  <Label className="text-xs font-medium text-foreground/80">
+                    Scopes (comma-separated)
+                  </Label>
                   <Input
                     className="h-9 text-sm"
                     value={scopeInput}
                     onChange={(event) => {
-                      const value = event.target.value
-                      setScopeInput(value)
+                      const value = event.target.value;
+                      setScopeInput(value);
                       updateConnectionForm({
                         scopes: value
                           .split(",")
                           .map((item) => item.trim())
                           .filter(Boolean),
-                      })
+                      });
                     }}
                     placeholder={SCOPE_HINT}
                   />
-                  <p className="text-[11px] text-slate-400">Required scopes: {SCOPE_HINT}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Required scopes: {SCOPE_HINT}
+                  </p>
                 </div>
-                <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
-                  <p className="mb-2 text-xs font-medium text-slate-700">Scope meanings</p>
+                <div className="rounded-md border border-border bg-background px-3 py-3">
+                  <p className="mb-2 text-xs font-medium text-foreground/80">
+                    Scope meanings
+                  </p>
                   <div className="space-y-2">
                     {SCOPE_DESCRIPTIONS.map((scope) => {
-                      const isSelected = (form.scopes ?? []).includes(scope.id)
+                      const isSelected = (form.scopes ?? []).includes(scope.id);
                       return (
-                        <div key={scope.id} className="flex items-start gap-2 text-xs">
-                          <Badge className={isSelected ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}>
+                        <div
+                          key={scope.id}
+                          className="flex items-start gap-2 text-xs"
+                        >
+                          <Badge
+                            className={
+                              isSelected
+                                ? "bg-fuchsia-500/10 text-fuchsia-700"
+                                : "bg-muted text-muted-foreground"
+                            }
+                          >
                             {scope.id}
                           </Badge>
                           <div>
-                            <p className="font-medium text-slate-800">{scope.name}</p>
-                            <p className="text-slate-500">{scope.description}</p>
+                            <p className="font-medium text-foreground">
+                              {scope.name}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {scope.description}
+                            </p>
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </div>
-                <div className="grid gap-3 rounded-md border border-slate-200 bg-white px-3 py-3 text-xs md:grid-cols-2">
+                <div className="grid gap-3 rounded-md border border-border bg-background px-3 py-3 text-xs md:grid-cols-2">
                   <div>
-                    <p className="mb-1 text-slate-500">Token Status</p>
-                    <p className="font-medium text-slate-900">{formatTokenStatus(displayedTokenStatus)}</p>
+                    <p className="mb-1 text-muted-foreground">Token Status</p>
+                    <p className="font-medium text-foreground">
+                      {formatTokenStatus(displayedTokenStatus)}
+                    </p>
                   </div>
                   <div>
-                    <p className="mb-1 text-slate-500">Last Checked At</p>
-                    <p className="font-medium text-slate-900">{formatDateTime(displayedLastCheckedAt)}</p>
+                    <p className="mb-1 text-muted-foreground">
+                      Last Checked At
+                    </p>
+                    <p className="font-medium text-foreground">
+                      {formatDateTime(displayedLastCheckedAt)}
+                    </p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="mb-1 text-slate-500">Resolved Scopes</p>
-                    <p className="break-all font-mono text-slate-700">{displayedScopes.length > 0 ? scopesToString(displayedScopes) : "-"}</p>
+                    <p className="mb-1 text-muted-foreground">
+                      Resolved Scopes
+                    </p>
+                    <p className="break-all font-mono text-foreground/80">
+                      {displayedScopes.length > 0
+                        ? scopesToString(displayedScopes)
+                        : "-"}
+                    </p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="mb-1 text-slate-500">Authorized Advertisers</p>
-                    <p className="font-medium text-slate-900">{displayedAdvertiserCount.toLocaleString()}</p>
+                    <p className="mb-1 text-muted-foreground">
+                      Authorized Advertisers
+                    </p>
+                    <p className="font-medium text-foreground">
+                      {displayedAdvertiserCount.toLocaleString()}
+                    </p>
                   </div>
                   {displayedMessage ? (
                     <div className="md:col-span-2">
-                      <p className="mb-1 text-slate-500">Last Check Message</p>
-                      <p className={`text-sm ${getTokenStatusMessageClass(displayedTokenStatus)}`}>{displayedMessage}</p>
+                      <p className="mb-1 text-muted-foreground">
+                        Last Check Message
+                      </p>
+                      <p
+                        className={`text-sm ${getTokenStatusMessageClass(displayedTokenStatus)}`}
+                      >
+                        {displayedMessage}
+                      </p>
                     </div>
                   ) : null}
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-4">
               <div className="flex flex-wrap items-center gap-4">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                  <Switch checked={form.isDefault} onCheckedChange={(value) => setForm((current) => ({ ...current, isDefault: value }))} />
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground/80">
+                  <Switch
+                    checked={form.isDefault}
+                    onCheckedChange={(value) =>
+                      setForm((current) => ({ ...current, isDefault: value }))
+                    }
+                  />
                   Set as Default
                 </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                  <Switch checked={form.isEnabled} onCheckedChange={(value) => setForm((current) => ({ ...current, isEnabled: value }))} />
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground/80">
+                  <Switch
+                    checked={form.isEnabled}
+                    onCheckedChange={(value) =>
+                      setForm((current) => ({ ...current, isEnabled: value }))
+                    }
+                  />
                   Enabled
                 </label>
               </div>
             </div>
           </div>
-          <DialogFooter className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <Button variant="ghost" className="w-full text-slate-600 sm:w-auto" onClick={() => setDrawerOpen(false)} disabled={submitting}>
+          <DialogFooter className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <Button
+              variant="ghost"
+              className="w-full text-muted-foreground sm:w-auto"
+              onClick={() => setDrawerOpen(false)}
+              disabled={submitting}
+            >
               Cancel
             </Button>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-              <Button className="w-full sm:w-auto" variant="outline" onClick={() => void handleTestConnection()} disabled={submitting || testingConnection || !canEdit}>
-                {testingConnection ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+              <Button
+                className="w-full sm:w-auto"
+                variant="outline"
+                onClick={() => void handleTestConnection()}
+                disabled={submitting || testingConnection || !canEdit}
+              >
+                {testingConnection ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                )}
                 Test Connection
               </Button>
-              <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => void handleSubmit()} disabled={submitting || !form.displayName.trim()}>
-                {submitting ? "Saving..." : editTarget ? "Save Changes" : "Create Integration"}
+              <Button
+                className="w-full bg-slate-900 text-white shadow-md shadow-slate-900/20 hover:bg-slate-800 sm:w-auto"
+                onClick={() => void handleSubmit()}
+                disabled={submitting || !form.displayName.trim()}
+              >
+                {submitting
+                  ? "Saving..."
+                  : editTarget
+                    ? "Save Changes"
+                    : "Create Integration"}
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

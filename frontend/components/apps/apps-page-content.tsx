@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef, type ReactNode } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RefreshCw, Download, Search, X, Cloud, Smartphone, Layers, DollarSign, Loader2, AlertCircle, ArrowRight } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { RefreshCw, Download, Search, X, Cloud, Smartphone, Layers, DollarSign, Loader2, AlertCircle, ArrowRight, ChevronDown, SlidersHorizontal } from "lucide-react"
 import Link from "next/link"
 import { AppsTable } from "./apps-table"
 import { Card } from "@/components/ui/card"
@@ -37,6 +38,7 @@ interface ActiveFilter {
 }
 
 export function AppsPageContent() {
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [platform, setPlatform] = useState("All Platforms")
   const [status, setStatus] = useState("Active")
@@ -116,6 +118,7 @@ export function AppsPageContent() {
 
   const apps = appsResponse?.apps || []
   const summary = appsResponse?.summary
+  const activeFilterCount = activeFilters.length + (searchQuery.trim() ? 1 : 0)
 
   // Số waterfall chưa được gắn với ad unit nào (orphan). Gọi theo publisherId khi chọn 1 account.
   const { data: orphanWaterfallData, loading: orphanWaterfallLoading } = useApi(
@@ -251,6 +254,89 @@ export function AppsPageContent() {
   const canViewInAdmob = hasScreenFunction(SCREEN_APPS, FN_VIEW_IN_ADMOB)
   const canSetType = hasScreenFunction(SCREEN_APPS, FN_SET_TYPE)
 
+  const filterSelectClassName = "h-10 w-full bg-card lg:w-auto"
+  const filterControls: ReactNode = (
+    <>
+      <Select value={platform} onValueChange={(v) => handleFilterChange("Platform", v)}>
+        <SelectTrigger className={`${filterSelectClassName} lg:w-36`}>
+          <SelectValue placeholder="Platform" />
+        </SelectTrigger>
+        <SelectContent>
+          {platformOptions.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={status} onValueChange={(v) => handleFilterChange("Status", v)}>
+        <SelectTrigger className={`${filterSelectClassName} lg:w-32`}>
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          {statusOptions.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={type} onValueChange={(v) => handleFilterChange("Type", v)}>
+        <SelectTrigger className={`${filterSelectClassName} lg:w-32`}>
+          <SelectValue placeholder="Type" />
+        </SelectTrigger>
+        <SelectContent>
+          {typeOptions.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={network} onValueChange={(v) => handleFilterChange("Network", v)}>
+        <SelectTrigger className={`${filterSelectClassName} lg:w-36`}>
+          <SelectValue placeholder="Network" />
+        </SelectTrigger>
+        <SelectContent>
+          {networkOptions.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={admobAccount} onValueChange={(v) => handleFilterChange("AdMob Account", v)}>
+        <SelectTrigger className={`${filterSelectClassName} lg:w-44`}>
+          <SelectValue placeholder="AdMob Account" />
+        </SelectTrigger>
+        <SelectContent>
+          {admobAccountSelectOptions.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt === ALL_ACCOUNTS_VALUE ? "All Accounts" : opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={wfFilter} onValueChange={(v) => handleFilterChange("% WF", v)}>
+        <SelectTrigger className={`${filterSelectClassName} lg:w-32`}>
+          <SelectValue placeholder="% WF" />
+        </SelectTrigger>
+        <SelectContent>
+          {wfOptions.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  )
+
   if (!canView) {
     return <NoPermissionView />
   }
@@ -276,9 +362,9 @@ export function AppsPageContent() {
       </div>
 
       {/* Action Bar */}
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+      <div className="flex flex-col gap-3">
         {/* Left: Search & Filters */}
-        <div className="flex min-w-0 flex-col xl:flex-row xl:items-center gap-3">
+        <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center">
           <div className="relative w-full xl:w-80 xl:shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -289,99 +375,55 @@ export function AppsPageContent() {
             />
           </div>
 
-          <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:flex lg:flex-wrap xl:w-auto xl:flex-nowrap">
-            <Select value={platform} onValueChange={(v) => handleFilterChange("Platform", v)}>
-              <SelectTrigger className="h-10 w-full bg-card lg:w-36">
-                <SelectValue placeholder="Platform" />
-              </SelectTrigger>
-              <SelectContent>
-                {platformOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={status} onValueChange={(v) => handleFilterChange("Status", v)}>
-              <SelectTrigger className="h-10 w-full bg-card lg:w-32">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={type} onValueChange={(v) => handleFilterChange("Type", v)}>
-              <SelectTrigger className="h-10 w-full bg-card lg:w-32">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {typeOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={network} onValueChange={(v) => handleFilterChange("Network", v)}>
-              <SelectTrigger className="h-10 w-full bg-card lg:w-36">
-                <SelectValue placeholder="Network" />
-              </SelectTrigger>
-              <SelectContent>
-                {networkOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={admobAccount} onValueChange={(v) => handleFilterChange("AdMob Account", v)}>
-              <SelectTrigger className="h-10 w-full bg-card lg:w-44">
-                <SelectValue placeholder="AdMob Account" />
-              </SelectTrigger>
-              <SelectContent>
-                {admobAccountSelectOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt === ALL_ACCOUNTS_VALUE ? "All Accounts" : opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-
-            <Select value={wfFilter} onValueChange={(v) => handleFilterChange("% WF", v)}>
-              <SelectTrigger className="h-10 w-full bg-card lg:w-32">
-                <SelectValue placeholder="% WF" />
-              </SelectTrigger>
-              <SelectContent>
-                {wfOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="hidden w-full min-w-0 lg:flex lg:flex-wrap lg:gap-2">
+            {filterControls}
           </div>
+
+          <Collapsible open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen} className="w-full lg:hidden">
+            <div className="rounded-xl border border-border bg-card/60">
+              <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">Filters</span>
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary" className="h-5 rounded-full px-2 text-xs">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {activeFilterCount > 0 ? "Tap to review or refine current filters" : "Tap to choose platform, status, network, and more"}
+                  </p>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${mobileFiltersOpen ? "rotate-180" : ""}`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="border-t border-border px-3 pb-3 pt-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {filterControls}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        <div
+          className={`grid w-full gap-2 sm:flex sm:w-auto sm:items-center sm:justify-end ${
+            canExport && canSyncFromAdmob ? "grid-cols-2" : "grid-cols-1"
+          }`}
+        >
           {canExport && (
-            <Button variant="outline" className="h-10 gap-2 bg-transparent">
+            <Button variant="outline" className="h-10 w-full gap-2 bg-transparent sm:w-auto">
               <Download className="w-4 h-4" />
               Export
             </Button>
           )}
           {canSyncFromAdmob && (
             <Button 
-              className="h-10 gap-2 bg-blue-600 hover:bg-blue-700"
+              className="h-10 w-full gap-2 bg-blue-600 hover:bg-blue-700 sm:w-auto"
               onClick={() => void loadApps()}
               disabled={appsLoading || backgroundAppsLoading}
             >

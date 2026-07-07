@@ -57,17 +57,25 @@ const formatIcons: Record<string, React.ElementType> = {
 }
 
 const formatColors: Record<string, string> = {
-  BANNER: "bg-blue-50 text-blue-700 border-blue-200",
-  INTERSTITIAL: "bg-purple-50 text-purple-700 border-purple-200",
-  REWARDED: "bg-amber-50 text-amber-700 border-amber-200",
-  REWARDED_INTERSTITIAL: "bg-amber-50 text-amber-700 border-amber-200",
-  NATIVE: "bg-green-50 text-green-700 border-green-200",
-  APP_OPEN: "bg-cyan-50 text-cyan-700 border-cyan-200",
-  Banner: "bg-blue-50 text-blue-700 border-blue-200",
-  Interstitial: "bg-purple-50 text-purple-700 border-purple-200",
-  Rewarded: "bg-amber-50 text-amber-700 border-amber-200",
-  Native: "bg-green-50 text-green-700 border-green-200",
-  "App Open": "bg-cyan-50 text-cyan-700 border-cyan-200",
+  BANNER: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-300",
+  INTERSTITIAL:
+    "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-900/70 dark:bg-purple-950/40 dark:text-purple-300",
+  REWARDED:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300",
+  REWARDED_INTERSTITIAL:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300",
+  NATIVE:
+    "border-green-200 bg-green-50 text-green-700 dark:border-green-900/70 dark:bg-green-950/40 dark:text-green-300",
+  APP_OPEN: "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-900/70 dark:bg-cyan-950/40 dark:text-cyan-300",
+  Banner: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-300",
+  Interstitial:
+    "border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-900/70 dark:bg-purple-950/40 dark:text-purple-300",
+  Rewarded:
+    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300",
+  Native:
+    "border-green-200 bg-green-50 text-green-700 dark:border-green-900/70 dark:bg-green-950/40 dark:text-green-300",
+  "App Open":
+    "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-900/70 dark:bg-cyan-950/40 dark:text-cyan-300",
 }
 
 export function formatAdFormatDisplay(format?: string | null): string {
@@ -93,7 +101,7 @@ export function getMediationNetworkDisplayName(adSourceId?: string | null, title
 
 export function getMediationNetworkBadge(adSourceId?: string | null): { emoji?: string; color: string; name: string } {
   if (!adSourceId) {
-    return { color: "bg-slate-400", name: "Unknown" }
+    return { color: "bg-muted", name: "Unknown" }
   }
   const idLower = adSourceId.toLowerCase()
   for (const [key, info] of Object.entries(networkLogos)) {
@@ -106,7 +114,7 @@ export function getMediationNetworkBadge(adSourceId?: string | null): { emoji?: 
       return { color, name: getMediationNetworkDisplayName(adSourceId) }
     }
   }
-  return { color: "bg-slate-400", name: getMediationNetworkDisplayName(adSourceId) }
+  return { color: "bg-muted", name: getMediationNetworkDisplayName(adSourceId) }
 }
 
 export interface AdSourceInfoLike {
@@ -130,7 +138,7 @@ export function MediationGroupAdSourcesCell({ adSourcesInfo }: { adSourcesInfo: 
   const list = adSourcesInfo ?? []
   return (
     <div className="flex items-center gap-1">
-      <span className="text-sm text-slate-600">{list.length}</span>
+      <span className="text-sm text-muted-foreground">{list.length}</span>
       {list.length > 0 && (
         <div className="flex items-center -space-x-1 ml-1">
           {list.slice(0, 4).map((adSource, idx) => {
@@ -141,16 +149,16 @@ export function MediationGroupAdSourcesCell({ adSourcesInfo }: { adSourcesInfo: 
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      "w-6 h-6 rounded-sm border-2 border-white flex items-center justify-center text-xs",
+                      "w-6 h-6 rounded-sm border-2 border-card flex items-center justify-center text-xs",
                       networkInfo.color,
-                      !networkInfo.emoji && "bg-slate-400",
+                      !networkInfo.emoji && "bg-muted",
                     )}
                     title={displayName}
                   >
                     {networkInfo.emoji ? (
                       <span>{networkInfo.emoji}</span>
                     ) : (
-                      <span className="text-white font-semibold text-[10px]">
+                      <span className="text-[10px] font-semibold text-muted-foreground">
                         {displayName.charAt(0).toUpperCase()}
                       </span>
                     )}
@@ -158,7 +166,7 @@ export function MediationGroupAdSourcesCell({ adSourcesInfo }: { adSourcesInfo: 
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p className="font-medium">{displayName}</p>
-                  <p className="text-xs text-slate-400">{adSource.adSourceId}</p>
+                  <p className="text-xs text-muted-foreground">{adSource.adSourceId}</p>
                 </TooltipContent>
               </Tooltip>
             )
@@ -166,8 +174,8 @@ export function MediationGroupAdSourcesCell({ adSourcesInfo }: { adSourcesInfo: 
           {list.length > 4 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="w-6 h-6 rounded-sm bg-slate-200 border-2 border-white flex items-center justify-center">
-                  <span className="text-[10px] font-semibold text-slate-600">+{list.length - 4}</span>
+                <div className="flex h-6 w-6 items-center justify-center rounded-sm border-2 border-card bg-muted">
+                  <span className="text-[10px] font-semibold text-muted-foreground">+{list.length - 4}</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -201,7 +209,7 @@ export function MediationGroupTargetingCell({
 
   if (isGlobal) {
     return (
-      <div className="flex items-center gap-1 text-sm text-slate-600">
+      <div className="flex items-center gap-1 text-sm text-muted-foreground">
         <Globe className="w-4 h-4 shrink-0" aria-hidden />
         Global
       </div>
@@ -213,7 +221,7 @@ export function MediationGroupTargetingCell({
       {list.slice(0, 8).map((countryCode, idx) => (
         <CountryFlagTooltipCell key={`${countryCode}-${idx}`} code={countryCode} />
       ))}
-      {list.length > 8 ? <span className="ml-0.5 text-xs text-slate-500">+{list.length - 8}</span> : null}
+      {list.length > 8 ? <span className="ml-0.5 text-xs text-muted-foreground">+{list.length - 8}</span> : null}
     </div>
   )
 }

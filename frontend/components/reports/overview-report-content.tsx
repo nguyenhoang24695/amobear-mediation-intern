@@ -20,7 +20,8 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { format, parse, parseISO } from "date-fns"
 import { enUS } from "date-fns/locale"
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, Filter, GripVertical, Info, Loader2, RefreshCw, Save, X } from "lucide-react"
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Copy, Filter, GripVertical, Info, Loader2, RefreshCw, Save, X } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -68,7 +69,6 @@ import {
 import { getCurrentUser, hasScreenFunction } from "@/lib/auth"
 import { authApi, reportsApi, type OrgTeamGroup } from "@/lib/api/services"
 import { useApi } from "@/hooks/use-api"
-import { useDraggableVerticalFixed } from "@/hooks/use-draggable-vertical-fixed"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { loadScopedCommissionTeams } from "@/lib/reports/scoped-commission-teams"
 import {
@@ -89,14 +89,13 @@ import type {
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/
 const APPS_PER_PAGE = 20
-const OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY = "overview-report-mobile-filters-sticker-top-v1"
 const SHARED_APP_CONFLICTS_DISPLAY_MAX = 5
 
 /** Sticky offsets — khớp h-10 (40px) + h-8 (32px) + h-8 (32px); TableHead mặc định h-10 phải override ở row 2–3. */
 const OVERVIEW_STICKY_HEADER_ROW_2_TOP = "top-10"
 const OVERVIEW_STICKY_HEADER_ROW_3_TOP = "top-[4.5rem]"
 const OVERVIEW_STICKY_TOTAL_ROW_CLASS =
-  "sticky top-[6.5rem] z-[35] bg-muted shadow-[0_4px_6px_-2px_rgba(15,23,42,0.12)]"
+  "sticky top-[6.5rem] z-[35] bg-muted dark:bg-slate-950/95 shadow-[0_4px_6px_-2px_rgba(15,23,42,0.12)]"
 const OVERVIEW_STICKY_TOTAL_ROW_CELL_CLASS = "!h-10 min-h-10 max-h-10 py-0 box-border align-middle"
 const OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS = "!h-8 min-h-8 max-h-8 py-0.5 box-border align-middle"
 
@@ -114,24 +113,24 @@ const OVERVIEW_COLUMN_STYLES: Record<
   }
 > = {
   revenue: {
-    sidebarSelected: "bg-sky-50 text-sky-900",
-    sidebarAccent: "bg-sky-500",
-    sidebarCheckbox: "border-sky-600 bg-sky-600",
-    groupHeader: "bg-sky-50/80 text-sky-700",
-    header: "bg-sky-50 text-sky-900",
-    cell: "bg-sky-50/35",
-    cellSubtle: "bg-sky-50/55",
-    border: "border-sky-200",
+    sidebarSelected: "bg-slate-50 text-slate-900 dark:bg-slate-800 dark:text-slate-50",
+    sidebarAccent: "bg-slate-500",
+    sidebarCheckbox: "border-slate-600 bg-slate-600 dark:border-slate-400 dark:bg-slate-500",
+    groupHeader: "bg-slate-100/85 text-slate-700 dark:bg-slate-800 dark:text-slate-100",
+    header: "bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-50",
+    cell: "bg-slate-100/60 dark:bg-slate-900/95",
+    cellSubtle: "bg-slate-100/80 dark:bg-slate-800/95",
+    border: "border-slate-200 dark:border-slate-700",
   },
   performance: {
-    sidebarSelected: "bg-emerald-50 text-emerald-900",
-    sidebarAccent: "bg-emerald-500",
-    sidebarCheckbox: "border-emerald-600 bg-emerald-600",
-    groupHeader: "bg-emerald-50/80 text-emerald-700",
-    header: "bg-emerald-50 text-emerald-900",
-    cell: "bg-emerald-50/35",
-    cellSubtle: "bg-emerald-50/55",
-    border: "border-emerald-200",
+    sidebarSelected: "bg-slate-50 text-slate-900 dark:bg-slate-800 dark:text-slate-50",
+    sidebarAccent: "bg-slate-500",
+    sidebarCheckbox: "border-slate-600 bg-slate-600 dark:border-slate-400 dark:bg-slate-500",
+    groupHeader: "bg-slate-100/85 text-slate-700 dark:bg-slate-800 dark:text-slate-100",
+    header: "bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-50",
+    cell: "bg-slate-100/60 dark:bg-slate-900/95",
+    cellSubtle: "bg-slate-100/80 dark:bg-slate-800/95",
+    border: "border-slate-200 dark:border-slate-700",
   },
 }
 
@@ -332,30 +331,35 @@ function formatMonthLabel(month: string): string {
   }
 }
 
-function renderPlatformBadge(platformValue: string) {
+function renderPlatformBadge(platformValue: string, options?: { compact?: boolean }) {
   const platform = platformValue || "Unknown"
   const isAndroid = platform.toUpperCase() === "ANDROID"
+  const compact = options?.compact ?? false
+  const platformLabel = isAndroid ? "Android" : platform.toUpperCase() === "IOS" ? "iOS" : platform
+  const iconSizeClass = compact ? "h-2.5 w-2.5" : "h-3 w-3"
 
   return (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1",
+        compact ? "h-6 w-6 justify-center p-0" : "gap-1 px-2 py-0.5 text-[11px]",
         isAndroid
           ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300"
           : "border-border bg-muted/50 text-foreground",
       )}
+      title={platformLabel}
+      aria-label={platformLabel}
     >
       {isAndroid ? (
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+        <svg className={iconSizeClass} viewBox="0 0 24 24" fill="currentColor">
           <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.31-.16-.69-.04-.85.26l-1.87 3.23c-1.31-.56-2.77-.87-4.32-.87-1.55 0-3.01.31-4.32.87L5.96 5.71c-.16-.31-.54-.43-.85-.26-.31.16-.43.54-.26.85L6.69 9.48C3.66 11.08 1.6 14.06 1.6 17.5h20.8c0-3.44-2.06-6.42-5.09-8.02zM7.04 15c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm10 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
         </svg>
       ) : (
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+        <svg className={iconSizeClass} viewBox="0 0 24 24" fill="currentColor">
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83z" />
         </svg>
       )}
-      {platform}
+      {!compact ? <span>{platformLabel}</span> : null}
     </Badge>
   )
 }
@@ -461,12 +465,28 @@ function getAppMonthsFiltered(
 }
 
 function normalizeOverviewResponse(raw: ProfitOverviewReportResponse): ProfitOverviewReportResponse {
-  return {
-    ...raw,
-    teams: (raw.teams ?? []).map((team) => ({
+  const teamsById = new Map<string, ProfitOverviewTeamRow>()
+  for (const team of raw.teams ?? []) {
+    const normalizedId = normalizeTeamId(team.teamId)
+    if (!teamsById.has(normalizedId)) {
+      teamsById.set(normalizedId, {
+        ...team,
+        months: normalizeMonthsRecord(team.months),
+      })
+      continue
+    }
+
+    const existing = teamsById.get(normalizedId)!
+    teamsById.set(normalizedId, {
+      ...existing,
       ...team,
       months: normalizeMonthsRecord(team.months),
-    })),
+    })
+  }
+
+  return {
+    ...raw,
+    teams: [...teamsById.values()],
   }
 }
 
@@ -527,11 +547,13 @@ function TeamAppsPager({
   totalPages,
   totalItems,
   onPageChange,
+  isMobile = false,
 }: {
   currentPage: number
   totalPages: number
   totalItems: number
   onPageChange: (page: number) => void
+  isMobile?: boolean
 }) {
   if (totalPages <= 1) return null
 
@@ -539,31 +561,37 @@ function TeamAppsPager({
   const end = Math.min(currentPage * APPS_PER_PAGE, totalItems)
 
   return (
-    <div className="flex flex-col gap-2 py-1 text-sm sm:flex-row sm:flex-wrap sm:items-center">
-      <span className="shrink-0 text-muted-foreground">
+    <div
+      className={cn(
+        "flex flex-col gap-1.5 py-1 text-sm xl:flex-row xl:flex-wrap xl:items-center xl:gap-2",
+        "max-xl:min-w-0",
+      )}
+    >
+      <span className="shrink-0 text-xs text-muted-foreground xl:text-sm">
         Apps <span className="font-medium text-foreground">{start}</span>–
         <span className="font-medium text-foreground">{end}</span> of{" "}
         <span className="font-medium text-foreground">{totalItems}</span>
       </span>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-1 max-xl:w-full xl:justify-start xl:gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8"
+          className="h-6 px-2 text-[11px] xl:h-8 xl:px-3 xl:text-sm"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(currentPage - 1)}
         >
-          Previous
+          <span className="xl:hidden">Prev</span>
+          <span className="hidden xl:inline">Previous</span>
         </Button>
-        <span className="tabular-nums text-muted-foreground">
+        <span className="tabular-nums text-[11px] text-muted-foreground xl:text-sm">
           {currentPage} / {totalPages}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-8"
+          className="h-6 px-2 text-[11px] xl:h-8 xl:px-3 xl:text-sm"
           disabled={currentPage >= totalPages}
           onClick={() => onPageChange(currentPage + 1)}
         >
@@ -582,6 +610,7 @@ function OverviewMonthCells({
   trailingCell,
   stickyTotalRowClass,
   asHeader = false,
+  isMobile = false,
 }: {
   months: Record<string, ProfitOverviewMonthCell>
   monthKeys: string[]
@@ -590,6 +619,7 @@ function OverviewMonthCells({
   trailingCell?: ProfitOverviewMonthCell | null
   stickyTotalRowClass?: string
   asHeader?: boolean
+  isMobile?: boolean
 }) {
   const CellComponent = asHeader ? TableHead : TableCell
 
@@ -607,6 +637,16 @@ function OverviewMonthCells({
             : rowVariant === "total"
               ? "bg-muted"
               : columnStyle.cell
+        const mobileBgClass =
+          isMobile && rowVariant !== "total"
+            ? rowVariant === "app"
+              ? column.group === "revenue"
+                ? "bg-slate-100/95 dark:bg-slate-900/95"
+                : "bg-slate-100/95 dark:bg-slate-900/95"
+              : column.group === "revenue"
+                ? "bg-slate-100/88 dark:bg-slate-800/95"
+                : "bg-slate-100/88 dark:bg-slate-800/95"
+            : ""
         const isFirstColumn = columnIndex === 0
         const isLastColumnInGroup = columnIndex === visibleColumns.length - 1
         const isTrailingTotal = options?.isTrailingTotal ?? false
@@ -626,6 +666,7 @@ function OverviewMonthCells({
                 : "",
               isLastColumnInGroup ? "border-r-2 border-border" : cn("border-r", columnStyle.border),
               bgClass,
+              mobileBgClass,
               rowVariant === "total" ? "font-semibold" : "",
               overviewColumnCellClassName(column.id, cell),
             )}
@@ -678,7 +719,7 @@ function SortableOverviewColumnItem({
       onClick={() => onToggle(id)}
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors",
-        selected ? groupStyle.sidebarSelected : "text-foreground hover:bg-muted/50",
+        selected ? groupStyle.sidebarSelected : "text-foreground hover:bg-muted/50 dark:hover:bg-muted/70",
       )}
     >
       <span
@@ -713,6 +754,7 @@ function SortableOverviewColumnItem({
 }
 
 export function OverviewReportContent() {
+  const router = useRouter()
   const canManageCommission = hasScreenFunction("s-commission", "manage")
   const storedCurrentUser = getCurrentUser()
   const { data: currentUserResponse } = useApi(
@@ -751,17 +793,11 @@ export function OverviewReportContent() {
   const [metricsCollapsed, setMetricsCollapsed] = useState(false)
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const isMobile = useIsMobile()
-  const {
-    containerRef: mobileFiltersStickerRef,
-    topPx: mobileFiltersStickerTop,
-    consumeDragClick: consumeMobileFiltersStickerDragClick,
-    dragProps: mobileFiltersStickerDragProps,
-  } = useDraggableVerticalFixed(OVERVIEW_MOBILE_FILTERS_STICKER_TOP_KEY)
   const overviewStickyFirstColWidth = isMobile
-    ? "min-w-[112px] max-w-[112px] w-[112px]"
-    : "min-w-[280px]"
+    ? "min-w-[140px] max-w-[140px] w-[140px]"
+    : "min-w-[170px] max-w-[170px] w-[170px] xl:min-w-[280px] xl:max-w-[280px] xl:w-[280px]"
   const overviewStickyNestedRowPadding = isMobile ? "pl-6" : "pl-10"
-  const overviewStickyPagerPadding = isMobile ? "pl-7" : "pl-12"
+  const overviewStickyPagerPadding = isMobile ? "pl-4" : "pl-12"
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -801,6 +837,14 @@ export function OverviewReportContent() {
       return [...prev, columnId]
     })
   }
+
+  const handleMobileBack = useCallback(() => {
+    if (window.history.length > 1) {
+      router.back()
+      return
+    }
+    router.push("/reports")
+  }, [router])
 
   const handleColumnDragEndForGroup = (group: OverviewColumnGroup) => (event: DragEndEvent) => {
     const { active, over } = event
@@ -1105,15 +1149,24 @@ export function OverviewReportContent() {
   }, [filterTeams])
 
   const teams = useMemo(() => {
-    if (selectedTeamIds.length === 0) return allTeams
+    const dedupedAllTeams = (() => {
+      const byId = new Map<string, ProfitOverviewTeamRow>()
+      for (const team of allTeams) {
+        const normalizedId = normalizeTeamId(team.teamId)
+        if (!byId.has(normalizedId)) byId.set(normalizedId, team)
+      }
+      return [...byId.values()]
+    })()
+
+    if (selectedTeamIds.length === 0) return dedupedAllTeams
 
     const selected = new Set(selectedTeamIds.map(normalizeTeamId))
-    const dataById = new Map(allTeams.map((team) => [normalizeTeamId(team.teamId), team]))
+    const dataById = new Map(dedupedAllTeams.map((team) => [normalizeTeamId(team.teamId), team]))
 
     const orderedCandidates =
       filterTeams.length > 0
         ? filterTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
-        : allTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
+        : dedupedAllTeams.filter((team) => selected.has(normalizeTeamId(team.teamId)))
 
     return orderedCandidates.map((candidate) => {
       const row = dataById.get(normalizeTeamId(candidate.teamId))
@@ -1383,8 +1436,8 @@ export function OverviewReportContent() {
           const groupLabel = group === "revenue" ? "Revenue" : "Performance"
           const groupHeadingClass =
             group === "revenue"
-              ? "text-sky-700"
-              : "text-emerald-700"
+              ? "text-sky-700 dark:text-sky-300"
+              : "text-emerald-700 dark:text-emerald-300"
 
           return (
             <div key={group} className="space-y-1">
@@ -1430,6 +1483,22 @@ export function OverviewReportContent() {
 
   return (
     <div className="space-y-6">
+      {isMobile ? (
+        <div className="px-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 gap-2 px-2 text-muted-foreground hover:bg-transparent hover:text-foreground"
+            onClick={handleMobileBack}
+            aria-label="Go back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+        </div>
+      ) : null}
+
       <Card className="gap-0 overflow-hidden border-border py-0 shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between gap-3 border-b border-border bg-muted/50 px-4 py-2.5 [.border-b]:pb-2.5">
           <div className="min-w-0 flex-1">
@@ -1438,25 +1507,45 @@ export function OverviewReportContent() {
               KPI plan vs actual by team (revenue, cost, profit). Expand a team for per-app detail.
             </CardDescription>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className={cn(
-                  "h-9 w-9 shrink-0 border-border bg-card text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground",
-                  isMobile && "hidden",
-                )}
-                onClick={() => setFilterExpanded((prev) => !prev)}
-                aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
-                aria-expanded={filterExpanded}
+          {isMobile ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-9 shrink-0 gap-2 rounded-full border-border bg-card px-3 text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground",
+                hasPendingApply && "ring-2 ring-blue-300 ring-offset-2 ring-offset-background",
+              )}
+              onClick={() => setMobileFiltersOpen(true)}
+              aria-label="Open filters and metrics"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="whitespace-nowrap text-sm font-medium">Filters</span>
+              <Badge
+                variant="secondary"
+                className="h-5 min-w-5 justify-center rounded-full px-1.5 text-[10px] font-semibold"
               >
-                {filterExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{filterExpanded ? "Hide filters" : "Show filters"}</TooltipContent>
-          </Tooltip>
+                {selectedColumnsCount}
+              </Badge>
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border-border bg-card text-foreground shadow-sm hover:border-border hover:bg-muted hover:text-foreground"
+                  onClick={() => setFilterExpanded((prev) => !prev)}
+                  aria-label={filterExpanded ? "Collapse filters" : "Expand filters"}
+                  aria-expanded={filterExpanded}
+                >
+                  {filterExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{filterExpanded ? "Hide filters" : "Show filters"}</TooltipContent>
+            </Tooltip>
+          )}
         </CardHeader>
         {!isMobile && filterExpanded ? (
           <CardContent className="flex flex-wrap items-end gap-3 px-4 py-3 [&_label]:leading-none">
@@ -1466,64 +1555,24 @@ export function OverviewReportContent() {
       </Card>
 
       {isMobile ? (
-        <>
-          <div
-            ref={mobileFiltersStickerRef}
-            className="fixed right-0 z-40 flex touch-none flex-col items-end gap-2"
-            style={
-              mobileFiltersStickerTop == null
-                ? { top: "50%", transform: "translateY(-50%)" }
-                : { top: mobileFiltersStickerTop }
-            }
+        <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+          <SheetContent
+            side="right"
+            className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
           >
-            <button
-              type="button"
-              {...mobileFiltersStickerDragProps}
-              onClick={() => {
-                if (consumeMobileFiltersStickerDragClick()) return
-                setMobileFiltersOpen(true)
-              }}
-              className={cn(
-                "flex cursor-grab flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-border bg-card px-1.5 py-3 shadow-lg active:cursor-grabbing",
-                hasPendingApply && "ring-2 ring-blue-300",
-              )}
-              aria-label="Open filters and metrics. Drag up or down to reposition."
-            >
-              <Filter className="h-4 w-4 text-muted-foreground" aria-hidden />
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
-                style={{ writingMode: "vertical-rl" }}
-              >
-                Filters & Metrics
-              </span>
-              <Badge
-                variant="secondary"
-                className="h-5 min-w-5 justify-center px-1 text-[10px] font-semibold"
-              >
-                {selectedColumnsCount}
-              </Badge>
-            </button>
-          </div>
-
-          <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-            <SheetContent
-              side="right"
-              className="flex h-[100dvh] max-h-[100dvh] w-[min(100vw-1rem,22rem)] flex-col gap-0 overflow-hidden p-0"
-            >
-              <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
-                <SheetTitle className="text-base">Filters & Metrics</SheetTitle>
-                <SheetDescription>
-                  Period, teams, and columns. Click Apply to refresh data.
-                </SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-                <div className="box-border min-w-0 max-w-full overflow-x-hidden p-4">
-                  {renderOverviewMobileFiltersAndMetricsBody()}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-        </>
+            <SheetHeader className="shrink-0 border-b border-border px-4 py-4 text-left">
+              <SheetTitle className="text-base">Filters & Metrics</SheetTitle>
+              <SheetDescription>
+                Period, teams, and columns. Click Apply to refresh data.
+              </SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+              <div className="box-border min-w-0 max-w-full overflow-x-hidden p-4">
+                {renderOverviewMobileFiltersAndMetricsBody()}
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
       ) : null}
 
       {loading ? (
@@ -1533,8 +1582,17 @@ export function OverviewReportContent() {
       ) : data === null ? (
         <Card className="border-border">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Select a period and click <span className="font-medium text-foreground">Apply</span> to load the
-            overview report.
+            {isMobile ? (
+              <>
+                Tap <span className="font-medium text-foreground">Filters</span> above, then press{" "}
+                <span className="font-medium text-foreground">Apply</span> to load the overview report.
+              </>
+            ) : (
+              <>
+                Select a period and click <span className="font-medium text-foreground">Apply</span> to load the
+                overview report.
+              </>
+            )}
           </CardContent>
         </Card>
       ) : allTeams.length === 0 ? (
@@ -1568,10 +1626,40 @@ export function OverviewReportContent() {
               </p>
               {sharedAppConflicts.length > 0 && !sharedAppWarningDismissed ? (
                 <div
-                  className="relative border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-700 dark:text-red-300"
+                  className="relative overflow-hidden border-b border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-700 dark:text-red-300"
                   role="alert"
                 >
-                  <div className="absolute right-2 top-2 flex items-center gap-1.5">
+                  <div className="flex flex-col gap-2 sm:pr-36">
+                    <p className="font-semibold text-red-700 break-words dark:text-red-300">
+                      Warning: the same app appears under multiple teams in the same group
+                    </p>
+                    <ul className="mt-1.5 min-w-0 list-disc space-y-1 pl-4 pr-0 break-words">
+                      {sharedAppConflicts
+                        .slice(0, SHARED_APP_CONFLICTS_DISPLAY_MAX)
+                        .map((conflict) => (
+                          <li key={`${conflict.appStoreId}-${conflict.groupLabels.join("|")}`} className="min-w-0 break-words">
+                            <span className="break-words font-medium">{conflict.appLabel}</span>{" "}
+                            <span className="break-all font-mono text-red-600/90">({conflict.appStoreId})</span>
+                            {" - groups: "}
+                            <span className="break-words">
+                              {conflict.groupLabels
+                                .map((g) =>
+                                  getTeamGroupSectionLabel(g === "(No group)" ? null : g),
+                                )
+                                .join(", ")}
+                            </span>
+                            {" - teams: "}
+                            <span className="break-words">{conflict.teamNames.join(", ")}</span>
+                          </li>
+                        ))}
+                    </ul>
+                    {sharedAppConflicts.length > SHARED_APP_CONFLICTS_DISPLAY_MAX ? (
+                      <p className="font-medium text-red-700 dark:text-red-300">
+                        +{sharedAppConflicts.length - SHARED_APP_CONFLICTS_DISPLAY_MAX} more
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex items-center gap-1.5 sm:absolute sm:right-2 sm:top-2 sm:mt-0">
                     <span className="whitespace-nowrap text-[10px] text-red-600/80">
                       Auto close in {sharedAppWarningCountdown}s
                     </span>
@@ -1586,42 +1674,16 @@ export function OverviewReportContent() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="pr-36 font-semibold text-red-700 dark:text-red-300">
-                    Warning: the same app appears under multiple teams in the same group
-                  </p>
-                  <ul className="mt-1.5 list-disc space-y-1 pl-4">
-                    {sharedAppConflicts
-                      .slice(0, SHARED_APP_CONFLICTS_DISPLAY_MAX)
-                      .map((conflict) => (
-                        <li key={`${conflict.appStoreId}-${conflict.groupLabels.join("|")}`}>
-                          <span className="font-medium">{conflict.appLabel}</span>{" "}
-                          <span className="font-mono text-red-600/90">({conflict.appStoreId})</span>
-                          {" — groups: "}
-                          {conflict.groupLabels
-                            .map((g) =>
-                              getTeamGroupSectionLabel(g === "(No group)" ? null : g),
-                            )
-                            .join(", ")}
-                          {" · teams: "}
-                          {conflict.teamNames.join(", ")}
-                        </li>
-                      ))}
-                  </ul>
-                  {sharedAppConflicts.length > SHARED_APP_CONFLICTS_DISPLAY_MAX ? (
-                    <p className="mt-1 pl-4 font-medium text-red-700 dark:text-red-300">
-                      +{sharedAppConflicts.length - SHARED_APP_CONFLICTS_DISPLAY_MAX} more
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
               <div ref={scrollContainerRef} className="max-h-[min(70vh,720px)] overflow-auto">
-                <table className="w-full caption-bottom border-separate border-spacing-0 text-sm">
+                <table className="min-w-full w-max caption-bottom border-separate border-spacing-0 text-sm">
                   <TableHeader>
                     <TableRow className="h-10 bg-muted/95 hover:bg-muted/95">
                       <TableHead
                         rowSpan={4}
                         className={cn(
-                          "sticky left-0 top-0 z-50 border-r bg-muted/50 align-bottom px-2 pb-2 font-bold text-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
+                          "sticky left-0 top-0 z-50 border-r bg-muted align-bottom px-2 pb-2 font-bold text-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.18)]",
                           overviewStickyFirstColWidth,
                         )}
                       >
@@ -1654,7 +1716,7 @@ export function OverviewReportContent() {
                         <TableHead
                           key={month}
                           colSpan={colsPerMonth}
-                          className="sticky top-0 z-40 !h-10 border-b border-r border-border bg-muted/50 text-center text-xs font-semibold text-foreground"
+                          className="sticky top-0 z-40 !h-10 border-b border-r border-border bg-muted text-center text-xs font-semibold text-foreground"
                         >
                           {formatMonthLabel(month)}
                         </TableHead>
@@ -1677,7 +1739,8 @@ export function OverviewReportContent() {
                                 OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
-                                "bg-muted/50",
+                                "bg-muted",
+                                isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               Revenue
@@ -1691,7 +1754,8 @@ export function OverviewReportContent() {
                                 OVERVIEW_STICKY_HEADER_ROW_2_TOP,
                                 OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                                 OVERVIEW_COLUMN_STYLES.performance.groupHeader,
-                                "bg-muted/50",
+                                "bg-muted",
+                                isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               Performance
@@ -1709,6 +1773,7 @@ export function OverviewReportContent() {
                               OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                               OVERVIEW_COLUMN_STYLES.revenue.groupHeader,
                               "bg-muted",
+                              isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                             )}
                           >
                             Revenue
@@ -1723,6 +1788,7 @@ export function OverviewReportContent() {
                               OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
                               OVERVIEW_COLUMN_STYLES.performance.groupHeader,
                               "bg-muted",
+                              isMobile && "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                             )}
                           >
                             Performance
@@ -1742,18 +1808,20 @@ export function OverviewReportContent() {
                                 key={`${month}-${column.id}`}
                                 className={cn(
                                   column.minWidthClass,
-                                  "sticky z-40 text-right text-xs font-medium",
-                                  OVERVIEW_STICKY_HEADER_ROW_3_TOP,
-                                  OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
-                                  columnStyle.header,
-                                  isFirstColumn ? cn("border-l", columnStyle.border) : "",
-                                  isLastColumnInMonth
-                                    ? "border-r-2 border-border"
-                                    : cn("border-r", columnStyle.border),
-                                  "bg-muted/50",
-                                )}
-                              >
-                                {column.label}
+                                "sticky z-40 text-right text-xs font-medium",
+                                OVERVIEW_STICKY_HEADER_ROW_3_TOP,
+                                OVERVIEW_HEADER_SUB_ROW_HEAD_CLASS,
+                                columnStyle.header,
+                                isFirstColumn ? cn("border-l", columnStyle.border) : "",
+                                isLastColumnInMonth
+                                  ? "border-r-2 border-border"
+                                  : cn("border-r", columnStyle.border),
+                                "bg-muted",
+                                isMobile &&
+                                  "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
+                              )}
+                            >
+                              {column.label}
                               </TableHead>
                             )
                           })}
@@ -1778,6 +1846,8 @@ export function OverviewReportContent() {
                                   ? "border-r-2 border-border"
                                   : cn("border-r", columnStyle.border),
                                 "bg-muted",
+                                isMobile &&
+                                  "bg-slate-100 text-slate-900 dark:bg-slate-900/95 dark:text-slate-50",
                               )}
                             >
                               {column.label}
@@ -1794,6 +1864,7 @@ export function OverviewReportContent() {
                         rowVariant="total"
                         trailingCell={grandTotalCell}
                         stickyTotalRowClass={OVERVIEW_STICKY_TOTAL_ROW_CLASS}
+                        isMobile={isMobile}
                         asHeader
                       />
                     </TableRow>
@@ -1855,13 +1926,14 @@ export function OverviewReportContent() {
                               months={team.months}
                               visibleColumns={visibleColumns}
                               trailingCell={aggregateMonthsRecord(team.months, months)}
+                              isMobile={isMobile}
                             />
                           </TableRow>
                           {expanded && appsLoading ? (
                             <TableRow className="bg-muted/40 hover:bg-muted/60">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-muted/50 py-4 text-sm text-muted-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-muted py-4 text-sm text-muted-foreground shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyNestedRowPadding,
                                 )}
@@ -1923,15 +1995,15 @@ export function OverviewReportContent() {
                                 key={`${team.teamId}-${app.appId}`}
                                 className="bg-muted/40 hover:bg-muted/60"
                               >
-                                <TableCell
-                                  className={cn(
-                                    "sticky left-0 z-20 border-r bg-muted/50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
-                                    overviewStickyFirstColWidth,
-                                    overviewStickyNestedRowPadding,
-                                  )}
+                              <TableCell
+                                className={cn(
+                                  "sticky left-0 z-20 border-r bg-muted py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  overviewStickyFirstColWidth,
+                                  overviewStickyNestedRowPadding,
+                                )}
                                 >
-                                  <div className="flex min-w-0 items-center justify-between gap-3">
-                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                  {isMobile ? (
+                                    <div className="flex items-center gap-3">
                                       <Avatar className="h-8 w-8 shrink-0 rounded-lg">
                                         {app.appIconUri ? (
                                           <AvatarImage
@@ -1944,52 +2016,88 @@ export function OverviewReportContent() {
                                           {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <div className="min-w-0">
-                                        <div className="truncate text-sm font-medium text-foreground">
-                                          {app.appLabel}
+                                      {renderPlatformBadge(app.appPlatform ?? "", { compact: true })}
+                                    </div>
+                                ) : (
+                                    <>
+                                      <div className="flex min-w-0 items-center gap-3 xl:hidden">
+                                        <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                                          {app.appIconUri ? (
+                                            <AvatarImage
+                                              src={app.appIconUri}
+                                              alt={app.appLabel}
+                                              className="rounded-lg object-cover"
+                                            />
+                                          ) : null}
+                                          <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
+                                            {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        {renderPlatformBadge(app.appPlatform ?? "")}
+                                      </div>
+                                      <div className="hidden min-w-0 items-center justify-between gap-3 xl:flex">
+                                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                                          <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                                            {app.appIconUri ? (
+                                              <AvatarImage
+                                                src={app.appIconUri}
+                                                alt={app.appLabel}
+                                                className="rounded-lg object-cover"
+                                              />
+                                            ) : null}
+                                            <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
+                                              {app.appLabel?.trim()?.slice(0, 1)?.toUpperCase() || "A"}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="min-w-0 flex-1">
+                                            <div className="truncate text-sm font-medium text-foreground">
+                                              {app.appLabel}
+                                            </div>
+                                            <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                                              <span
+                                                className="min-w-0 truncate font-mono"
+                                                title={app.appStoreId ?? undefined}
+                                              >
+                                                {formatAppStoreId(app.appStoreId)}
+                                              </span>
+                                              {app.appStoreId ? (
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                  aria-label={`Copy App Store ID for ${app.appLabel}`}
+                                                  onClick={(event) => {
+                                                    event.stopPropagation()
+                                                    void copyAppStoreId(appStoreCopyKey, app.appStoreId)
+                                                  }}
+                                                >
+                                                  <Copy className="h-3 w-3" />
+                                                </Button>
+                                              ) : null}
+                                              {appStoreCopied ? (
+                                                <span className="shrink-0 text-xs font-medium text-green-600">
+                                                  Copied!
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          </div>
                                         </div>
-                                        <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                                          <span
-                                            className="min-w-0 truncate font-mono"
-                                            title={app.appStoreId ?? undefined}
-                                          >
-                                            {formatAppStoreId(app.appStoreId)}
-                                          </span>
-                                          {app.appStoreId ? (
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                              aria-label={`Copy App Store ID for ${app.appLabel}`}
-                                              onClick={(event) => {
-                                                event.stopPropagation()
-                                                void copyAppStoreId(appStoreCopyKey, app.appStoreId)
-                                              }}
-                                            >
-                                              <Copy className="h-3 w-3" />
-                                            </Button>
-                                          ) : null}
-                                          {appStoreCopied ? (
-                                            <span className="shrink-0 text-xs font-medium text-green-600">
-                                              Copied!
-                                            </span>
-                                          ) : null}
+                                        <div className="shrink-0">
+                                          {renderPlatformBadge(app.appPlatform ?? "")}
                                         </div>
                                       </div>
-                                    </div>
-                                    <div className="shrink-0">
-                                      {renderPlatformBadge(app.appPlatform ?? "")}
-                                    </div>
-                                  </div>
+                                    </>
+                                  )}
                                 </TableCell>
-                                <OverviewMonthCells
-                                  monthKeys={months}
-                                  months={filteredAppMonths}
-                                  visibleColumns={visibleColumns}
-                                  rowVariant="app"
-                                  trailingCell={aggregateMonthsRecord(filteredAppMonths, months)}
-                                />
+                              <OverviewMonthCells
+                                monthKeys={months}
+                                months={filteredAppMonths}
+                                visibleColumns={visibleColumns}
+                                rowVariant="app"
+                                trailingCell={aggregateMonthsRecord(filteredAppMonths, months)}
+                                isMobile={isMobile}
+                              />
                               </TableRow>
                               )
                             })}
@@ -1997,7 +2105,7 @@ export function OverviewReportContent() {
                             <TableRow className="bg-muted/30 hover:bg-muted/30">
                               <TableCell
                                 className={cn(
-                                  "sticky left-0 z-20 border-r bg-muted/50 py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
+                                  "sticky left-0 z-20 border-r bg-muted py-2 shadow-[4px_0_8px_-4px_rgba(15,23,42,0.16)]",
                                   overviewStickyFirstColWidth,
                                   overviewStickyPagerPadding,
                                 )}
@@ -2006,6 +2114,7 @@ export function OverviewReportContent() {
                                   currentPage={safeAppPage}
                                   totalPages={totalAppPages}
                                   totalItems={appCount}
+                                  isMobile={isMobile}
                                   onPageChange={(page) => setTeamAppPage(team.teamId, page)}
                                 />
                               </TableCell>
@@ -2092,3 +2201,4 @@ export function OverviewReportContent() {
     </div>
   )
 }
+

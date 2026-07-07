@@ -100,8 +100,8 @@ function TrafficTimeRangePanel({
 
   return (
     <div className="flex w-[min(95vw,760px)] flex-col overflow-hidden rounded-md bg-popover text-popover-foreground">
-      <div className="flex min-h-0">
-        <aside className="flex w-[240px] shrink-0 flex-col border-r border-border">
+      <div className="flex min-h-0 flex-col md:flex-row">
+        <aside className="flex w-full shrink-0 flex-col border-b border-border md:w-[240px] md:border-b-0 md:border-r">
           <div className="border-b border-border p-3">
             <Input
               value={relativeInput}
@@ -201,17 +201,17 @@ function TrafficTimeRangePanel({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border px-4 py-3">
+      <div className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center">
         <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
           {validationMessage ?? formatTrafficTimeRangeLabel(draft)}
         </span>
-        <div className="flex shrink-0 gap-2">
-          <Button type="button" variant="outline" className="h-8 px-4" onClick={onCancel}>
+        <div className="flex shrink-0 gap-2 sm:justify-end">
+          <Button type="button" variant="outline" className="h-8 flex-1 px-4 sm:flex-none" onClick={onCancel}>
             Cancel
           </Button>
           <Button
             type="button"
-            className="h-8 px-4"
+            className="h-8 flex-1 px-4 sm:flex-none"
             disabled={!isValid}
             onClick={() => onApply(draft)}
           >
@@ -244,7 +244,7 @@ export function TrafficTimeRangePicker({ value, onChange, maxDays = 90, classNam
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start" collisionPadding={16}>
+      <PopoverContent className="w-[calc(100vw-1.5rem)] max-w-[760px] p-0 sm:w-auto" align="start" collisionPadding={16}>
         {open ? (
           <TrafficTimeRangePanel
             value={value}

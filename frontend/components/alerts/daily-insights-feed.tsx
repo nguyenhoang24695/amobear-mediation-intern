@@ -38,7 +38,13 @@ export function DailyInsightsFeed() {
   const [severityFilter, setSeverityFilter] = useState<"all" | "critical" | "warning" | "healthy">("all")
   const [payload, setPayload] = useState<{
     date: string
-    summary: { totalApps: number; criticalCount: number; warningCount: number; healthyCount: number; generatedApps: number }
+    summary: {
+      totalApps: number
+      criticalCount: number
+      warningCount: number
+      healthyCount: number
+      generatedApps: number
+    }
     items: DailyInsightFeedItem[]
   } | null>(null)
 
@@ -56,7 +62,7 @@ export function DailyInsightsFeed() {
       setPayload(res)
     } catch (e) {
       console.error(e)
-      toast({ title: "Không tải được Daily Insights", variant: "destructive" })
+      toast({ title: "Khong tai duoc Daily Insights", variant: "destructive" })
       setPayload(null)
     } finally {
       setLoading(false)
@@ -79,41 +85,48 @@ export function DailyInsightsFeed() {
   }, [payload, search])
 
   if (!can) {
-    return <p className="text-sm text-slate-500">Bạn không có quyền xem Daily Insights.</p>
+    return <p className="text-sm text-muted-foreground">Ban khong co quyen xem Daily Insights.</p>
   }
 
   const summary = payload?.summary
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
+          <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <Sparkles className="h-5 w-5 text-primary" />
             Daily Insights
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Tổng hợp insight theo ngày (T-1 mặc định)</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tong hop insight theo ngay (T-1 mac dinh)
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="gap-2 bg-transparent">
-                <CalendarIcon className="w-4 h-4" />
+                <CalendarIcon className="h-4 w-4" />
                 {format(selectedDate, "MMM d, yyyy")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
-              <Calendar mode="single" selected={selectedDate} onSelect={(d) => d && setSelectedDate(d)} initialFocus />
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+              />
             </PopoverContent>
           </Popover>
-          <div className="flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+          <div className="flex rounded-lg border border-border bg-muted/30 p-0.5">
             <Button
               variant={view === "cards" ? "secondary" : "ghost"}
               size="sm"
               className="h-8 px-2"
               onClick={() => setView("cards")}
             >
-              <Grid3x3 className="w-4 h-4" />
+              <Grid3x3 className="h-4 w-4" />
             </Button>
             <Button
               variant={view === "list" ? "secondary" : "ghost"}
@@ -121,48 +134,59 @@ export function DailyInsightsFeed() {
               className="h-8 px-2"
               onClick={() => setView("list")}
             >
-              <List className="w-4 h-4" />
+              <List className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
 
       {summary ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Card>
             <CardContent className="p-4">
-              <p className="text-2xl font-bold">{summary.totalApps}</p>
-              <p className="text-xs text-slate-500">Apps</p>
+              <p className="text-2xl font-bold text-foreground">{summary.totalApps}</p>
+              <p className="text-xs text-muted-foreground">Apps</p>
             </CardContent>
           </Card>
-          <Card className="border-red-100 bg-red-50/50">
+          <Card className="border-red-200 bg-red-500/10 dark:border-red-900/60">
             <CardContent className="p-4">
-              <p className="text-2xl font-bold text-red-600">{summary.criticalCount}</p>
-              <p className="text-xs text-slate-600">Critical</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {summary.criticalCount}
+              </p>
+              <p className="text-xs text-muted-foreground">Critical</p>
             </CardContent>
           </Card>
-          <Card className="border-amber-100 bg-amber-50/50">
+          <Card className="border-amber-200 bg-amber-500/10 dark:border-amber-900/60">
             <CardContent className="p-4">
-              <p className="text-2xl font-bold text-amber-700">{summary.warningCount}</p>
-              <p className="text-xs text-slate-600">Warning</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                {summary.warningCount}
+              </p>
+              <p className="text-xs text-muted-foreground">Warning</p>
             </CardContent>
           </Card>
-          <Card className="border-emerald-100 bg-emerald-50/50">
+          <Card className="border-emerald-200 bg-emerald-500/10 dark:border-emerald-900/60">
             <CardContent className="p-4">
-              <p className="text-2xl font-bold text-emerald-700">{summary.healthyCount}</p>
-              <p className="text-xs text-slate-600">Healthy</p>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                {summary.healthyCount}
+              </p>
+              <p className="text-xs text-muted-foreground">Healthy</p>
             </CardContent>
           </Card>
         </div>
       ) : null}
 
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col gap-3 md:flex-row">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <Input className="pl-9" placeholder="Tìm app…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Tim app..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full md:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -172,8 +196,11 @@ export function DailyInsightsFeed() {
             <SelectItem value="name">Sort: Name</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as typeof severityFilter)}>
-          <SelectTrigger className="w-40">
+        <Select
+          value={severityFilter}
+          onValueChange={(v) => setSeverityFilter(v as typeof severityFilter)}
+        >
+          <SelectTrigger className="w-full md:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -186,37 +213,43 @@ export function DailyInsightsFeed() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-500 gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          Loading…
+        <div className="flex justify-center gap-2 py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading...
         </div>
       ) : view === "cards" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => (
-            <Card key={item.insightId} className="border-slate-200 hover:border-indigo-200 transition-colors">
-              <CardContent className="p-4 space-y-3">
+            <Card key={item.insightId} className="border-border transition-colors hover:border-primary/30">
+              <CardContent className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
                     <img
                       src={item.iconUri || "/placeholder.svg"}
                       alt=""
-                      className="w-10 h-10 rounded-lg object-cover border border-slate-100"
+                      className="h-10 w-10 rounded-lg border border-border object-cover"
                     />
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 truncate">{item.displayName ?? item.appId}</p>
-                      <p className="text-xs text-slate-500 font-mono truncate">{item.appId}</p>
+                      <p className="truncate font-semibold text-foreground">
+                        {item.displayName ?? item.appId}
+                      </p>
+                      <p className="truncate font-mono text-xs text-muted-foreground">{item.appId}</p>
                     </div>
                   </div>
                   <Badge
                     variant="secondary"
                     className={cn(
-                      (item.healthScore ?? 0) >= 70 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900",
+                      (item.healthScore ?? 0) >= 70
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                        : "bg-amber-500/10 text-amber-800 dark:text-amber-400",
                     )}
                   >
-                    {item.healthScore ?? "—"}
+                    {item.healthScore ?? "-"}
                   </Badge>
                 </div>
-                <p className="text-sm text-slate-600 line-clamp-2">{item.summary || "—"}</p>
+                <p className="line-clamp-2 text-sm text-muted-foreground">
+                  {item.summary || "-"}
+                </p>
                 <div className="flex flex-wrap gap-1">
                   {item.anomalies.slice(0, 4).map((a, i) => (
                     <Badge
@@ -224,19 +257,22 @@ export function DailyInsightsFeed() {
                       variant="outline"
                       className={cn(
                         "text-xs",
-                        a.severity === "critical" && "border-red-200 text-red-700",
-                        a.severity === "warning" && "border-amber-200 text-amber-800",
-                        a.severity === "positive" && "border-emerald-200 text-emerald-800",
+                        a.severity === "critical" &&
+                          "border-red-300 text-red-700 dark:border-red-800 dark:text-red-400",
+                        a.severity === "warning" &&
+                          "border-amber-300 text-amber-800 dark:border-amber-800 dark:text-amber-400",
+                        a.severity === "positive" &&
+                          "border-emerald-300 text-emerald-800 dark:border-emerald-800 dark:text-emerald-400",
                       )}
                     >
                       {a.label}
                     </Badge>
                   ))}
                 </div>
-                <Button variant="ghost" size="sm" className="w-full gap-1 text-indigo-600" asChild>
+                <Button variant="ghost" size="sm" className="w-full gap-1 text-primary" asChild>
                   <Link href={`/apps/${encodeURIComponent(item.appId)}?tab=ai-insight&date=${item.insightDate}`}>
-                    Mở insight
-                    <ChevronRight className="w-4 h-4" />
+                    Mo insight
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </CardContent>
@@ -244,26 +280,32 @@ export function DailyInsightsFeed() {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 divide-y divide-slate-100">
+        <div className="divide-y divide-border rounded-lg border border-border">
           {items.map((item) => (
             <Link
               key={item.insightId}
               href={`/apps/${encodeURIComponent(item.appId)}?tab=ai-insight&date=${item.insightDate}`}
-              className="flex items-center gap-4 p-4 hover:bg-slate-50"
+              className="flex items-center gap-4 p-4 hover:bg-accent/40"
             >
-              <img src={item.iconUri || "/placeholder.svg"} alt="" className="w-10 h-10 rounded-lg object-cover" />
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 truncate">{item.displayName ?? item.appId}</p>
-                <p className="text-sm text-slate-500 truncate">{item.summary}</p>
+              <img
+                src={item.iconUri || "/placeholder.svg"}
+                alt=""
+                className="h-10 w-10 rounded-lg object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-foreground">{item.displayName ?? item.appId}</p>
+                <p className="truncate text-sm text-muted-foreground">{item.summary}</p>
               </div>
-              <Badge variant="secondary">{item.healthScore ?? "—"}</Badge>
+              <Badge variant="secondary">{item.healthScore ?? "-"}</Badge>
             </Link>
           ))}
         </div>
       )}
 
       {!loading && items.length === 0 ? (
-        <p className="text-center text-slate-500 py-12 text-sm">Không có insight cho bộ lọc hiện tại.</p>
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          Khong co insight cho bo loc hien tai.
+        </p>
       ) : null}
     </div>
   )

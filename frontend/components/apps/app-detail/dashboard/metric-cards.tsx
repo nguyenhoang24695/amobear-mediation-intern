@@ -18,13 +18,13 @@ const CARD_SKELETONS = Array.from({ length: 9 }, (_, index) => index)
 export function MetricCards({ summary, loading, error, onRetry }: MetricCardsProps) {
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <div className="rounded-xl border border-rose-500/20 bg-gradient-to-br from-rose-500/10 via-card to-background p-4 text-sm text-foreground shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-medium">Could not load dashboard summary</p>
-            <p className="mt-1 text-red-700">{error.message}</p>
+            <p className="mt-1 text-muted-foreground">{error.message}</p>
           </div>
-          <Button variant="outline" size="sm" className="bg-white" onClick={() => void onRetry()}>
+          <Button variant="outline" size="sm" className="bg-background/80" onClick={() => void onRetry()}>
             Retry
           </Button>
         </div>
@@ -36,10 +36,10 @@ export function MetricCards({ summary, loading, error, onRetry }: MetricCardsPro
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {CARD_SKELETONS.map((item) => (
-          <div key={item} className="h-[118px] rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="h-4 w-28 animate-pulse rounded bg-slate-200" />
-            <div className="mt-5 h-8 w-24 animate-pulse rounded bg-slate-200" />
-            <div className="mt-4 h-3 w-36 animate-pulse rounded bg-slate-100" />
+          <div key={item} className="h-[118px] rounded-xl border border-border/70 bg-card/90 p-4 shadow-sm">
+            <div className="h-4 w-28 animate-pulse rounded bg-muted" />
+            <div className="mt-5 h-8 w-24 animate-pulse rounded bg-muted" />
+            <div className="mt-4 h-3 w-36 animate-pulse rounded bg-muted/70" />
           </div>
         ))}
       </div>
@@ -137,17 +137,17 @@ function MetricCard({
   icon: LucideIcon
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-border/70 bg-card/90 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-600">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{value}</p>
+          <p className="truncate text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="mt-2 text-2xl font-semibold tracking-normal text-foreground">{value}</p>
         </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/50 text-muted-foreground">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 truncate text-xs text-slate-500">{helper}</p>
+      <p className="mt-3 truncate text-xs text-muted-foreground">{helper}</p>
     </div>
   )
 }

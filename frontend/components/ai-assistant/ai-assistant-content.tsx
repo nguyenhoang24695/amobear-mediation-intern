@@ -1084,7 +1084,7 @@ export function AiAssistantContent() {
 
   if (loadingContexts && contexts.length === 0) {
     return (
-      <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] items-center justify-center text-slate-500 md:h-[calc(100dvh-4rem)]">
+      <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] items-center justify-center text-muted-foreground md:h-[calc(100dvh-4rem)]">
         Đang tải...
       </div>
     )
@@ -1092,7 +1092,7 @@ export function AiAssistantContent() {
 
   return (
     <>
-      <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] overflow-hidden bg-white md:-m-6 md:h-[calc(100dvh-4rem)]">
+      <div className="flex h-[calc(100dvh-3.5rem-5.5rem)] min-w-0 overflow-hidden bg-background md:-m-6 md:h-[calc(100dvh-4rem)]">
         <ContextSidebar
           contexts={contexts}
           activeContextId={activeContextId}
@@ -1138,7 +1138,7 @@ export function AiAssistantContent() {
             onStopAgentic={handleStopAgentic}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-slate-50 text-slate-500">
+          <div className="flex min-w-0 flex-1 items-center justify-center bg-background p-6 text-center text-muted-foreground">
             <p>Chưa có context. Tạo context mới hoặc clone từ thư viện để bắt đầu.</p>
           </div>
         )}

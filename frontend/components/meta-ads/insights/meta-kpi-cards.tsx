@@ -37,14 +37,14 @@ interface MetaKpiCardsProps {
 export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
         {Array.from({ length: cardConfig.length }).map((_, index) => (
           <Card key={index}>
-            <CardContent className="space-y-4 p-5">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-14 w-full" />
+            <CardContent className="space-y-3 p-4 sm:space-y-4 sm:p-5">
+              <Skeleton className="h-4 w-20 sm:w-24" />
+              <Skeleton className="h-8 w-24 sm:h-10 sm:w-32" />
+              <Skeleton className="h-4 w-20 sm:h-5 sm:w-28" />
+              <Skeleton className="h-12 w-full sm:h-14" />
             </CardContent>
           </Card>
         ))}
@@ -53,7 +53,7 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
       {cardConfig.map((item) => {
         const current = overview ? getOverviewMetricCurrent(item.key, overview) : 0
         const previous = overview ? getOverviewMetricPrevious(item.key, overview) : 0
@@ -65,23 +65,23 @@ export function MetaKpiCards({ overview, daily, loading }: MetaKpiCardsProps) {
 
         return (
           <Card key={item.key}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-4">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
-                  <p className="mt-1 text-3xl font-bold text-foreground">{formatMetricValue(item.key, current)}</p>
-                  <div className="mt-3 flex items-center gap-2">
+                  <p className="text-xs font-medium text-muted-foreground sm:text-sm">{item.label}</p>
+                  <p className="mt-1 text-xl font-bold text-foreground sm:text-3xl">{formatMetricValue(item.key, current)}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-3">
                     <Badge
                       variant="secondary"
                       className={trend === "up" ? "bg-blue-50 text-blue-700" : "bg-rose-50 text-rose-700"}
                     >
                       {trend === "up" ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
-                      {`${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}
+                      <span className="text-[11px] sm:text-xs">{`${change >= 0 ? "+" : ""}${change.toFixed(1)}%`}</span>
                     </Badge>
-                    <span className="text-xs text-muted-foreground">vs previous period</span>
+                    <span className="text-[11px] text-muted-foreground sm:text-xs">vs previous period</span>
                   </div>
                 </div>
-                <div className="h-16 w-24 shrink-0">
+                <div className="h-12 w-full shrink-0 sm:h-16 sm:w-24">
                   {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={chartData}>

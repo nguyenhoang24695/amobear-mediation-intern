@@ -88,7 +88,7 @@ function DashboardTabContent({
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">Qonversion report</h2>
+        <h2 className="text-base font-semibold text-foreground">Qonversion report</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           {QONVERSION_PRODUCT_DAILY_CHARTS.map((chart) => {
@@ -108,7 +108,7 @@ function DashboardTabContent({
         </div>
       </section>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted-foreground">
         Active app: <code className="font-mono">{appId}</code> · range:{" "}
         <code className="font-mono">{dashboardRangeCacheKey(range)}</code>
       </p>

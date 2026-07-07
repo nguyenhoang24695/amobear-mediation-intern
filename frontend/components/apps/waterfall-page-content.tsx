@@ -454,8 +454,9 @@ export function WaterfallPageContent() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="px-4 sm:px-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/60">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -598,7 +599,8 @@ export function WaterfallPageContent() {
                     )
                   })}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
             {totalCount > 0 ? (
               <div className="border-t px-4 py-3">

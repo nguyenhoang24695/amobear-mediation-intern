@@ -130,16 +130,16 @@ export function RevenuePlanPlannedCell({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="group inline-flex w-full items-center justify-end gap-1 rounded px-1 py-0.5 text-right hover:bg-slate-100/80"
+            className="group inline-flex w-full items-center justify-end gap-1 rounded px-1 py-0.5 text-right hover:bg-muted"
             aria-label={`Edit planned revenue for ${month}`}
           >
             <span>{hasPlan ? formatCurrency(plannedRevenue) : "—"}</span>
-            <Pencil className="h-3 w-3 shrink-0 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-60 space-y-3 p-3">
           <div className="space-y-1.5">
-            <Label htmlFor={`planned-revenue-${appStoreId}-${month}`} className="text-xs text-slate-600">
+            <Label htmlFor={`planned-revenue-${appStoreId}-${month}`} className="text-xs text-muted-foreground">
               Planned Revenue ({month})
             </Label>
             <Input
@@ -150,7 +150,7 @@ export function RevenuePlanPlannedCell({
               value={draft}
               disabled={saving}
               placeholder="0.00"
-              className="h-9 bg-white tabular-nums"
+              className="h-9 bg-background tabular-nums"
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {

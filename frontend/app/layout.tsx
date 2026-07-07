@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { AuthProvider } from "@/components/auth/auth-provider"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/provider/theme-provider"
 import "./globals.css"
 
 const GA_MEASUREMENT_ID = "G-PS43R0F8VW"

@@ -553,7 +553,9 @@ export function OrgUsersTab({
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {userRoles.map((roleKey, index) => {
+                            {userRoles
+                              .filter((roleKey) => roleKey.trim().length > 0)
+                              .map((roleKey, index) => {
                               const roleLabel =
                                 user.roleNames?.[index] ||
                                 roles.find((r) => r.roleKey === roleKey)
@@ -564,7 +566,7 @@ export function OrgUsersTab({
                                 "bg-muted text-muted-foreground";
                               return (
                                 <Badge
-                                  key={`${user.id}-${roleKey}`}
+                                  key={`${user.id}-${roleKey || "role"}-${index}`}
                                   className={roleColor}
                                 >
                                   {roleLabel}

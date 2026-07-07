@@ -54,7 +54,7 @@ export function OrgChartPanViewport({ children, className }: OrgChartPanViewport
       ref={viewportRef}
       data-chart-pan-surface
       className={cn(
-        "overflow-auto rounded-lg border border-slate-200 bg-slate-50/50",
+        "overflow-auto rounded-lg border border-slate-200 bg-slate-50/50 dark:border-white/10 dark:bg-slate-950/30",
         panning && "cursor-grabbing select-none",
         className,
       )}
