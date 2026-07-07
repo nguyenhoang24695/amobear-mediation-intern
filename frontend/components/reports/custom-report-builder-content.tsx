@@ -158,6 +158,7 @@ const datePresets = [
 ] as const
 
 type DateFilterMode = "preset" | "month" | "custom"
+type TableLayoutMode = "desktop" | "tablet" | "mobile"
 
 const FILTER_DATE_RANGE = "Date range"
 const FILTER_APPS = "Apps"
@@ -208,6 +209,11 @@ const PARAMETER_COLUMN_WIDTHS: Record<string, number> = {
 const MOBILE_APP_COLUMN_WIDTH = 52
 const MOBILE_DATE_COLUMN_WIDTH = 72
 const MOBILE_PLATFORM_COLUMN_WIDTH = 40
+const COMPACT_LANDSCAPE_MAX_HEIGHT = 540
+const TABLET_COMPACT_MAX_WIDTH = 1180
+const TABLET_APP_COLUMN_WIDTH = 56
+const TABLET_DATE_COLUMN_WIDTH = 96
+const TABLET_PLATFORM_COLUMN_WIDTH = 52
 const CUSTOM_REPORT_MOBILE_STICKERS_TOP_KEY = "custom-report-mobile-stickers-top-v1"
 const CUSTOM_REPORT_MOBILE_STICKERS_BOTTOM_SAFE_AREA = 128
 
@@ -480,11 +486,14 @@ function renderParameterCell(
   paramId: string,
   row: Record<string, string | number | null>,
   selectedParameters: string[],
-  isMobile = false,
+  layoutMode: TableLayoutMode = "desktop",
   forExpandPanel = false,
   expandPanelCentered = false,
 ) {
-  const tableIsMobile = forExpandPanel ? false : isMobile
+  const tableLayoutMode: TableLayoutMode = forExpandPanel ? "desktop" : layoutMode
+  const tableIsMobile = tableLayoutMode === "mobile"
+  const tableIsTablet = tableLayoutMode === "tablet"
+  const tableIsCompact = tableIsMobile || tableIsTablet
 
   if (paramId === "app") {
     const appName = String(row.app_display_name ?? row.app ?? "")
@@ -498,21 +507,27 @@ function renderParameterCell(
       <div
         className={cn(
           "flex min-w-0 max-w-full items-center gap-2",
-          tableIsMobile ? "justify-center" : "",
+          tableIsMobile ? "justify-center" : tableIsTablet ? "gap-1.5" : "",
         )}
-        title={tableIsMobile ? appName : undefined}
+        title={tableIsCompact ? appName : undefined}
       >
-        <Avatar className={cn("shrink-0 rounded-lg", tableIsMobile ? "h-9 w-9" : "h-10 w-10")}>
+        <Avatar
+          className={cn(
+            "shrink-0 rounded-lg",
+            tableIsMobile ? "h-9 w-9" : tableIsTablet ? "h-8 w-8" : "h-10 w-10",
+          )}
+        >
           {appIconUri ? <AvatarImage src={appIconUri} alt={appName} className="rounded-lg object-cover" /> : null}
           <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
             <Smartphone className="h-4 w-4" />
           </AvatarFallback>
         </Avatar>
-        {!tableIsMobile ? (
+        {!tableIsMobile && !tableIsTablet ? (
           <div className="min-w-0 flex-1">
             <div
               className={cn(
                 "text-sm font-medium text-foreground",
+                tableIsTablet && "text-xs leading-tight",
                 forExpandPanel ? "break-words" : "truncate",
               )}
             >
@@ -532,7 +547,7 @@ function renderParameterCell(
   }
 
   if (paramId === "platform") {
-    return renderPlatformBadge(String(row.platform ?? ""), tableIsMobile, {
+    return renderPlatformBadge(String(row.platform ?? ""), tableIsCompact, {
       large: expandPanelCentered,
     })
   }
@@ -614,7 +629,7 @@ function renderParameterCell(
             : "text-foreground",
           forExpandPanel && !expandPanelCentered ? "break-words text-sm" : "",
           !forExpandPanel && "whitespace-nowrap",
-          !forExpandPanel && (tableIsMobile ? "text-xs" : "text-sm"),
+          !forExpandPanel && (tableIsCompact ? "text-xs" : "text-sm"),
         )}
       >
         {String(row.date ?? "—")}
@@ -649,9 +664,9 @@ function buildRowExpandPanelProps(
       return {
         id: paramId,
         label: param?.label ?? paramId,
-        content: renderParameterCell(paramId, row, displayedParameters, false, true),
+        content: renderParameterCell(paramId, row, displayedParameters, "desktop", true),
         desktopContent: isCenteredPrimary
-          ? renderParameterCell(paramId, row, displayedParameters, false, true, true)
+          ? renderParameterCell(paramId, row, displayedParameters, "desktop", true, true)
           : undefined,
       }
     }),
@@ -666,31 +681,43 @@ function buildRowExpandPanelProps(
   }
 }
 
-function getParameterColumnWidth(paramId: string, isMobile = false) {
-  if (isMobile && paramId === "app") return MOBILE_APP_COLUMN_WIDTH
-  if (isMobile && paramId === "date") return MOBILE_DATE_COLUMN_WIDTH
-  if (isMobile && paramId === "platform") return MOBILE_PLATFORM_COLUMN_WIDTH
+function getParameterColumnWidth(paramId: string, layoutMode: TableLayoutMode = "desktop") {
+  if (layoutMode === "mobile" && paramId === "app") return MOBILE_APP_COLUMN_WIDTH
+  if (layoutMode === "mobile" && paramId === "date") return MOBILE_DATE_COLUMN_WIDTH
+  if (layoutMode === "mobile" && paramId === "platform") return MOBILE_PLATFORM_COLUMN_WIDTH
+  if (layoutMode === "tablet" && paramId === "app") return TABLET_APP_COLUMN_WIDTH
+  if (layoutMode === "tablet" && paramId === "date") return TABLET_DATE_COLUMN_WIDTH
+  if (layoutMode === "tablet" && paramId === "platform") return TABLET_PLATFORM_COLUMN_WIDTH
   return PARAMETER_COLUMN_WIDTHS[paramId] ?? DEFAULT_PARAMETER_COLUMN_WIDTH
 }
 
 function getParameterHorizontalPaddingClass(
   paramId: string,
   index: number,
-  isMobile: boolean,
+  layoutMode: TableLayoutMode,
 ): string | undefined {
-  if (isMobile) {
+  if (layoutMode === "mobile") {
     if (paramId === "app") return "px-1.5"
     if (paramId === "date" || paramId === "platform") return "px-1"
     return undefined
   }
+  if (layoutMode === "tablet") {
+    if (paramId === "app") return index === 0 ? "pl-3 pr-2" : "px-2"
+    if (paramId === "date" || paramId === "platform") return "px-2"
+    return index === 0 ? "pl-4" : undefined
+  }
   return index === 0 ? "pl-5" : undefined
 }
 
-function getParameterStickyStyle(parameters: string[], index: number, isMobile = false): CSSProperties {
+function getParameterStickyStyle(
+  parameters: string[],
+  index: number,
+  layoutMode: TableLayoutMode = "desktop",
+): CSSProperties {
   const left = parameters
     .slice(0, index)
-    .reduce((sum, paramId) => sum + getParameterColumnWidth(paramId, isMobile), 0)
-  const width = getParameterColumnWidth(parameters[index], isMobile)
+    .reduce((sum, paramId) => sum + getParameterColumnWidth(paramId, layoutMode), 0)
+  const width = getParameterColumnWidth(parameters[index], layoutMode)
 
   return {
     left,
@@ -777,8 +804,65 @@ function getMonthDateRange(month: Date): { start: Date; end: Date } {
   }
 }
 
+function useCompactLandscapeLayout() {
+  const [isCompactLandscape, setIsCompactLandscape] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia(
+      `(orientation: landscape) and (max-height: ${COMPACT_LANDSCAPE_MAX_HEIGHT}px)`,
+    )
+
+    const update = () => {
+      setIsCompactLandscape(mql.matches)
+    }
+
+    update()
+    mql.addEventListener("change", update)
+    window.addEventListener("resize", update)
+
+    return () => {
+      mql.removeEventListener("change", update)
+      window.removeEventListener("resize", update)
+    }
+  }, [])
+
+  return isCompactLandscape
+}
+
+function useTabletCompactLayout() {
+  const [isTabletCompact, setIsTabletCompact] = useState(false)
+
+  useEffect(() => {
+    const mql = window.matchMedia(
+      `(min-width: 768px) and (max-width: ${TABLET_COMPACT_MAX_WIDTH}px)`,
+    )
+
+    const update = () => {
+      setIsTabletCompact(mql.matches)
+    }
+
+    update()
+    mql.addEventListener("change", update)
+    window.addEventListener("resize", update)
+
+    return () => {
+      mql.removeEventListener("change", update)
+      window.removeEventListener("resize", update)
+    }
+  }, [])
+
+  return isTabletCompact
+}
+
 export function CustomReportBuilderContent() {
   const isMobile = useIsMobile()
+  const isCompactLandscape = useCompactLandscapeLayout()
+  const isTabletCompact = useTabletCompactLayout()
+  const tableLayoutMode: TableLayoutMode = isMobile || isCompactLandscape
+    ? "mobile"
+    : isTabletCompact
+      ? "tablet"
+      : "desktop"
   const {
     containerRef: mobileStickersRef,
     topPx: mobileStickersTop,
@@ -2269,33 +2353,38 @@ export function CustomReportBuilderContent() {
         <TableRow className="border-b-0">
           {displayedParameters.map((paramId, index) => {
             const param = catalogParameters.find((p) => p.id === paramId)
+            const showCompactHeaderIcon = tableLayoutMode === "mobile" || paramId === "platform"
             return (
               <TableHead
                 key={paramId}
                 className={cn(
                   "sticky top-0 z-50 cursor-pointer bg-card text-xs font-medium text-muted-foreground whitespace-nowrap hover:bg-muted/50",
-                  getParameterHorizontalPaddingClass(paramId, index, isMobile),
+                  getParameterHorizontalPaddingClass(paramId, index, tableLayoutMode),
                   index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                 )}
-                style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: 0 }}
+                style={{
+                  ...getParameterStickyStyle(displayedParameters, index, tableLayoutMode),
+                  top: 0,
+                }}
                 onClick={() => handleSort(paramId)}
               >
                 <div
                   className={cn(
                     "flex items-center gap-1",
-                    isMobile && (paramId === "app" || paramId === "platform") && "justify-center",
-                    isMobile && paramId === "date" && "text-xs",
+                    showCompactHeaderIcon && "justify-center",
+                    tableLayoutMode !== "desktop" && paramId === "date" && "text-xs",
                   )}
                 >
-                  {isMobile && paramId === "app" ? (
+                  {tableLayoutMode === "mobile" && paramId === "app" ? (
                     <Smartphone className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                  ) : isMobile && paramId === "platform" ? (
+                  ) : showCompactHeaderIcon && paramId === "platform" ? (
                     <Layers className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                   ) : (
                     param?.label
                   )}
                   {sortColumn === paramId && <ArrowUpDown className="h-3 w-3 text-muted-foreground" />}
-                  {!isMobile || (paramId !== "app" && paramId !== "date" && paramId !== "platform") ? (
+                  {tableLayoutMode === "desktop" ||
+                  (paramId !== "app" && paramId !== "date" && paramId !== "platform") ? (
                     <HelpCircle className="h-3 w-3 text-muted-foreground/60" />
                   ) : null}
                 </div>
@@ -2329,16 +2418,19 @@ export function CustomReportBuilderContent() {
               key={`total-p-${paramId}`}
               className={cn(
                 "sticky top-10 z-50 bg-muted py-3",
-                getParameterHorizontalPaddingClass(paramId, index, isMobile),
+                getParameterHorizontalPaddingClass(paramId, index, tableLayoutMode),
                 index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: "2.5rem" }}
+              style={{
+                ...getParameterStickyStyle(displayedParameters, index, tableLayoutMode),
+                top: "2.5rem",
+              }}
             >
               {index === 0 ? (
                 <span
                   className={cn(
                     "text-sm font-bold text-foreground",
-                    isMobile && paramId === "app" && "sr-only",
+                    tableLayoutMode === "mobile" && paramId === "app" && "sr-only",
                   )}
                 >
                   Total
@@ -2369,7 +2461,10 @@ export function CustomReportBuilderContent() {
                 "sticky top-20 z-50 h-1 bg-card p-0",
                 index === displayedParameters.length - 1 && "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
               )}
-              style={{ ...getParameterStickyStyle(displayedParameters, index, isMobile), top: "5rem" }}
+              style={{
+                ...getParameterStickyStyle(displayedParameters, index, tableLayoutMode),
+                top: "5rem",
+              }}
             >
               <div className="h-1 bg-emerald-500" />
             </TableHead>
@@ -2394,15 +2489,16 @@ export function CustomReportBuilderContent() {
             const isExpanded = expandedRowIndex === idx
             const rowBgClass = idx % 2 === 0 ? "bg-card" : "bg-muted/50"
             const stickyCellBgClass = isExpanded
-              ? isMobile
+              ? tableLayoutMode !== "desktop"
                 ? "bg-primary/15"
                 : "bg-primary/10"
-              : isMobile
+              : tableLayoutMode !== "desktop"
                 ? "bg-card"
                 : idx % 2 === 0
                   ? "bg-card"
                   : "bg-muted/50"
-            const stickyCellExpandedBgClass = isMobile ? "bg-primary/15" : "bg-primary/10"
+            const stickyCellExpandedBgClass =
+              tableLayoutMode !== "desktop" ? "bg-primary/15" : "bg-primary/10"
 
             return (
               <TableRow key={idx} className={cn(rowBgClass, isExpanded && "bg-primary/15")}>
@@ -2415,15 +2511,15 @@ export function CustomReportBuilderContent() {
                     aria-label={`${isExpanded ? "Collapse" : "Expand"} row ${idx + 1} details`}
                     className={cn(
                       "sticky cursor-pointer py-2 transition-colors",
-                      isMobile ? "z-30 overflow-hidden bg-card" : "z-20",
+                      tableLayoutMode !== "desktop" ? "z-30 overflow-hidden bg-card" : "z-20",
                       stickyCellBgClass,
                       "hover:bg-primary/15",
                       isExpanded && stickyCellExpandedBgClass,
-                      getParameterHorizontalPaddingClass(paramId, index, isMobile),
+                      getParameterHorizontalPaddingClass(paramId, index, tableLayoutMode),
                       index === displayedParameters.length - 1 &&
                         "shadow-[6px_0_10px_-10px_rgba(15,23,42,0.7)]",
                     )}
-                    style={getParameterStickyStyle(displayedParameters, index, isMobile)}
+                    style={getParameterStickyStyle(displayedParameters, index, tableLayoutMode)}
                     onClick={() => toggleRowExpand(idx)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -2432,7 +2528,7 @@ export function CustomReportBuilderContent() {
                       }
                     }}
                   >
-                    {renderParameterCell(paramId, row, displayedParameters, isMobile)}
+                    {renderParameterCell(paramId, row, displayedParameters, tableLayoutMode)}
                   </TableCell>
                 ))}
                 {displayedMetrics.map((metricId, index) => {
